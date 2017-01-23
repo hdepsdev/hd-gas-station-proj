@@ -1,0 +1,29 @@
+option java_package="com.bhz.eps.msg";
+option java_outer_classname="ManageMessageProto";
+option optimize_for=LITE_RUNTIME;
+
+enum MsgType{
+	Login_Request = 0x00010000;
+	Login_Response = 0x00010001;
+}
+
+message LoginRequest{
+	required string username = 1;
+	required bytes password = 2;
+}
+
+message Request{
+	optional LoginRequest loginRequest = 1;
+}
+
+message Response{
+	required bool result = 1;
+	optional bytes errorDescription = 2;
+}
+
+message ManageMessage{
+	required MsgType type = 1;
+	required int32 seqence = 2;
+	optional Request request = 3;
+	optional Response response = 4;
+}

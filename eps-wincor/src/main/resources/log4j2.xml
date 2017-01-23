@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration status="trace" strict="true" name="EPSClientLog">
+	<Properties>
+		<Property name="filename">./eps.log</Property>
+	</Properties>
+	<Appenders>
+		<Appender type="Console" name="STDOUT">
+			<Layout type="PatternLayout" pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+		</Appender>
+	</Appenders>
+	<Loggers>
+		<Logger name="com.bhz.eps.service" level="trace" additivity="false">
+			<AppenderRef ref="STDOUT"/>
+		</Logger>
+		<Logger name="com.bhz.eps.dao" level="trace" additivity="false">
+			<AppenderRef ref="STDOUT"/>
+		</Logger>
+		<Root level="trace">
+			<AppenderRef ref="STDOUT"/>
+		</Root>
+	</Loggers>
+</Configuration>

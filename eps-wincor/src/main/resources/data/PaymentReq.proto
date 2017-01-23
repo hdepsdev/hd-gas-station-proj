@@ -1,0 +1,14 @@
+option java_package="com.bhz.eps.msg";
+option java_outer_classname="PaymentReqProto";
+option optimize_for=LITE_RUNTIME;
+
+message PaymentReq{
+	required string stationCode = 1;
+	required int32 nozzleNumber = 2;
+	required string workOrder = 3;
+	required int32 paymentMethod = 4;
+	required int32 preferentialMethod = 5;
+	required string points = 6;
+	required string receivables = 7;
+	required string proceeds = 8;
+}
