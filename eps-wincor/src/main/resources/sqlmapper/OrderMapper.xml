@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bhz.eps.dao.OrderMapper">
+  <resultMap id="BaseResultMap" type="com.bhz.eps.entity.Order">
+    <id column="order_id" jdbcType="VARCHAR" property="orderId" />
+    <result column="merchant_id" jdbcType="VARCHAR" property="merchantId" />
+    <result column="merchant_name" jdbcType="VARCHAR" property="merchantName" />
+    <result column="generator" jdbcType="VARCHAR" property="generator" />
+    <result column="order_time" jdbcType="BIGINT" property="orderTime" />
+    <result column="shift_number" jdbcType="VARCHAR" property="shiftNumber" />
+    <result column="clerk_id" jdbcType="VARCHAR" property="clerkId" />
+    <result column="original_amount" jdbcType="DECIMAL" property="originalAmount" />
+    <result column="payment_amount" jdbcType="DECIMAL" property="paymentAmount" />
+    <result column="coupon_amount" jdbcType="DECIMAL" property="couponAmount" />
+    <result column="loyalty_point" jdbcType="BIGINT" property="loyaltyPoint" />
+    <result column="status" jdbcType="TINYINT" property="status" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    order_id, merchant_id, merchant_name, generator, order_time, shift_number, clerk_id, 
+    original_amount, payment_amount, coupon_amount, loyalty_point, status
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from `order`
+    where order_id = #{orderId,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from `order`
+    where order_id = #{orderId,jdbcType=VARCHAR}
+  </delete>
+  <insert id="insert" parameterType="com.bhz.eps.entity.Order">
+    insert into `order` (order_id, merchant_id, merchant_name, 
+      generator, order_time, shift_number, 
+      clerk_id, original_amount, payment_amount, 
+      coupon_amount, loyalty_point, status
+      )
+    values (#{orderId,jdbcType=VARCHAR}, #{merchantId,jdbcType=VARCHAR}, #{merchantName,jdbcType=VARCHAR}, 
+      #{generator,jdbcType=VARCHAR}, #{orderTime,jdbcType=BIGINT}, #{shiftNumber,jdbcType=VARCHAR}, 
+      #{clerkId,jdbcType=VARCHAR}, #{originalAmount,jdbcType=DECIMAL}, #{paymentAmount,jdbcType=DECIMAL}, 
+      #{couponAmount,jdbcType=DECIMAL}, #{loyaltyPoint,jdbcType=BIGINT}, #{status,jdbcType=TINYINT}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.bhz.eps.entity.Order">
+    insert into `order`
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="orderId != null">
+        order_id,
+      </if>
+      <if test="merchantId != null">
+        merchant_id,
+      </if>
+      <if test="merchantName != null">
+        merchant_name,
+      </if>
+      <if test="generator != null">
+        generator,
+      </if>
+      <if test="orderTime != null">
+        order_time,
+      </if>
+      <if test="shiftNumber != null">
+        shift_number,
+      </if>
+      <if test="clerkId != null">
+        clerk_id,
+      </if>
+      <if test="originalAmount != null">
+        original_amount,
+      </if>
+      <if test="paymentAmount != null">
+        payment_amount,
+      </if>
+      <if test="couponAmount != null">
+        coupon_amount,
+      </if>
+      <if test="loyaltyPoint != null">
+        loyalty_point,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="orderId != null">
+        #{orderId,jdbcType=VARCHAR},
+      </if>
+      <if test="merchantId != null">
+        #{merchantId,jdbcType=VARCHAR},
+      </if>
+      <if test="merchantName != null">
+        #{merchantName,jdbcType=VARCHAR},
+      </if>
+      <if test="generator != null">
+        #{generator,jdbcType=VARCHAR},
+      </if>
+      <if test="orderTime != null">
+        #{orderTime,jdbcType=BIGINT},
+      </if>
+      <if test="shiftNumber != null">
+        #{shiftNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="clerkId != null">
+        #{clerkId,jdbcType=VARCHAR},
+      </if>
+      <if test="originalAmount != null">
+        #{originalAmount,jdbcType=DECIMAL},
+      </if>
+      <if test="paymentAmount != null">
+        #{paymentAmount,jdbcType=DECIMAL},
+      </if>
+      <if test="couponAmount != null">
+        #{couponAmount,jdbcType=DECIMAL},
+      </if>
+      <if test="loyaltyPoint != null">
+        #{loyaltyPoint,jdbcType=BIGINT},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=TINYINT},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.bhz.eps.entity.Order">
+    update `order`
+    <set>
+      <if test="merchantId != null">
+        merchant_id = #{merchantId,jdbcType=VARCHAR},
+      </if>
+      <if test="merchantName != null">
+        merchant_name = #{merchantName,jdbcType=VARCHAR},
+      </if>
+      <if test="generator != null">
+        generator = #{generator,jdbcType=VARCHAR},
+      </if>
+      <if test="orderTime != null">
+        order_time = #{orderTime,jdbcType=BIGINT},
+      </if>
+      <if test="shiftNumber != null">
+        shift_number = #{shiftNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="clerkId != null">
+        clerk_id = #{clerkId,jdbcType=VARCHAR},
+      </if>
+      <if test="originalAmount != null">
+        original_amount = #{originalAmount,jdbcType=DECIMAL},
+      </if>
+      <if test="paymentAmount != null">
+        payment_amount = #{paymentAmount,jdbcType=DECIMAL},
+      </if>
+      <if test="couponAmount != null">
+        coupon_amount = #{couponAmount,jdbcType=DECIMAL},
+      </if>
+      <if test="loyaltyPoint != null">
+        loyalty_point = #{loyaltyPoint,jdbcType=BIGINT},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=TINYINT},
+      </if>
+    </set>
+    where order_id = #{orderId,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.bhz.eps.entity.Order">
+    update `order`
+    set merchant_id = #{merchantId,jdbcType=VARCHAR},
+      merchant_name = #{merchantName,jdbcType=VARCHAR},
+      generator = #{generator,jdbcType=VARCHAR},
+      order_time = #{orderTime,jdbcType=BIGINT},
+      shift_number = #{shiftNumber,jdbcType=VARCHAR},
+      clerk_id = #{clerkId,jdbcType=VARCHAR},
+      original_amount = #{originalAmount,jdbcType=DECIMAL},
+      payment_amount = #{paymentAmount,jdbcType=DECIMAL},
+      coupon_amount = #{couponAmount,jdbcType=DECIMAL},
+      loyalty_point = #{loyaltyPoint,jdbcType=BIGINT},
+      status = #{status,jdbcType=TINYINT}
+    where order_id = #{orderId,jdbcType=VARCHAR}
+  </update>
+</mapper>

@@ -1,26 +1,32 @@
 package com.bhz.eps.service.impl;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Resource;
 
-import com.bhz.eps.dao.SaleItemDao;
+import com.bhz.eps.dao.SaleItemMapper;
 import com.bhz.eps.entity.SaleItem;
 import com.bhz.eps.service.SaleItemService;
+import org.springframework.stereotype.Component;
 
+@Component("saleItemService")
 public class SaleItemServiceImpl implements SaleItemService {
 
 	@Resource
-	SaleItemDao saleItemDao;
+    SaleItemMapper saleItemMapper;
 	
 	@Override
 	public void addSaleItem(SaleItem saleItem) {
-		saleItemDao.addSaleItem(saleItem);
+        saleItemMapper.insert(saleItem);
 	}
 
 	@Override
 	public List<SaleItem> getSaleItemsbyOrderId(String orderId) {
-		return saleItemDao.getSaleItembyId(orderId);
+        Map param = new HashMap<>();
+        param.put("orderId", orderId);
+		return saleItemMapper.selectByParam(param);
 	}
 
 }
