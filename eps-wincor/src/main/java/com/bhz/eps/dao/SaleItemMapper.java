@@ -1,6 +1,6 @@
 package com.bhz.eps.dao;
 
-import com.bhz.eps.entity.SaleItem;
+import com.bhz.eps.entity.SaleItemEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -8,15 +8,15 @@ import java.util.Map;
 public interface SaleItemMapper {
     int deleteByPrimaryKey(String id);
 
-    int insert(SaleItem record);
+    int insert(SaleItemEntity record);
 
-    int insertSelective(SaleItem record);
+    int insertSelective(SaleItemEntity record);
 
-    SaleItem selectByPrimaryKey(String id);
+    SaleItemEntity selectByPrimaryKey(String id);
 
-    int updateByPrimaryKeySelective(SaleItem record);
+    int updateByPrimaryKeySelective(SaleItemEntity record);
 
-    int updateByPrimaryKey(SaleItem record);
+    int updateByPrimaryKey(SaleItemEntity record);
 
-    List<SaleItem> selectByParam(Map param);
+    List<SaleItemEntity> selectByParam(Map param);
 }

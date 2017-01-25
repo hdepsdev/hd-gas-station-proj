@@ -2,22 +2,17 @@ package com.bhz.eps.processor;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
-import com.bhz.eps.Boot;
 import com.bhz.eps.DeviceService;
 import com.bhz.eps.EPSServer;
 import com.bhz.eps.annotation.BizProcessorSpec;
 import com.bhz.eps.entity.CardServiceRequest;
-import com.bhz.eps.entity.CardServiceRequest.SaleItem;
 import com.bhz.eps.entity.Order;
 import com.bhz.eps.msg.BizMessageType;
-import com.bhz.eps.service.OilInfoService;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.SaleItemService;
 import com.bhz.eps.util.Utils;
-import com.thoughtworks.xstream.XStream;
 
 @BizProcessorSpec(msgType=BizMessageType.CARDSVR_REQUEST)
 public class CardServiceRequestProcessor extends BizProcessor {
@@ -51,7 +46,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		//存储saleitems
 		SaleItemService saleItemsrv = EPSServer.appctx.getBean("saleItemService", SaleItemService.class);
 		for(com.bhz.eps.entity.CardServiceRequest.SaleItem item : csr.getSaleItemList()){
-			com.bhz.eps.entity.SaleItem si = new com.bhz.eps.entity.SaleItem();
+			com.bhz.eps.entity.SaleItemEntity si = new com.bhz.eps.entity.SaleItemEntity();
 			si.setId(Utils.generateCompactUUID());
 			si.setProductCode(item.getProductCode());
 			si.setUnitMeasure(item.getUnitMeasure());
