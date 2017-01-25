@@ -78,6 +78,10 @@ public class TransPosDataSender {
 			worker.shutdownGracefully();
 		}
 	}
+	
+	public void askPosToPrintReceipt(Order order) throws Exception{
+		
+	}
 }
 
 class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
