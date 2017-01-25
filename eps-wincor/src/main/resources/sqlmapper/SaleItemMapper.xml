@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bhz.eps.dao.SaleItemMapper">
-  <resultMap id="BaseResultMap" type="com.bhz.eps.entity.SaleItem">
+  <resultMap id="BaseResultMap" type="com.bhz.eps.entity.SaleItemEntity">
     <id column="id" jdbcType="VARCHAR" property="id" />
     <result column="product_code" jdbcType="VARCHAR" property="productCode" />
     <result column="unit_measure" jdbcType="VARCHAR" property="unitMeasure" />
@@ -24,7 +24,7 @@
     delete from saleitem
     where id = #{id,jdbcType=VARCHAR}
   </delete>
-  <insert id="insert" parameterType="com.bhz.eps.entity.SaleItem">
+  <insert id="insert" parameterType="com.bhz.eps.entity.SaleItemEntity">
     insert into saleitem (id, product_code, unit_measure, 
       unit_price, quantity, itemcode, 
       order_id, amount)
@@ -32,7 +32,7 @@
       #{unitPrice,jdbcType=DECIMAL}, #{quantity,jdbcType=DECIMAL}, #{itemCode,jdbcType=VARCHAR},
       #{orderId,jdbcType=VARCHAR}, #{amount,jdbcType=DECIMAL})
   </insert>
-  <insert id="insertSelective" parameterType="com.bhz.eps.entity.SaleItem">
+  <insert id="insertSelective" parameterType="com.bhz.eps.entity.SaleItemEntity">
     insert into saleitem
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -87,7 +87,7 @@
       </if>
     </trim>
   </insert>
-  <update id="updateByPrimaryKeySelective" parameterType="com.bhz.eps.entity.SaleItem">
+  <update id="updateByPrimaryKeySelective" parameterType="com.bhz.eps.entity.SaleItemEntity">
     update saleitem
     <set>
       <if test="productCode != null">
@@ -114,7 +114,7 @@
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKey" parameterType="com.bhz.eps.entity.SaleItem">
+  <update id="updateByPrimaryKey" parameterType="com.bhz.eps.entity.SaleItemEntity">
     update saleitem
     set product_code = #{productCode,jdbcType=VARCHAR},
       unit_measure = #{unitMeasure,jdbcType=VARCHAR},
