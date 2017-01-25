@@ -58,7 +58,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		order.setOrderId(orderId);
 		order.setMerchantId(merchantId);
 		order.setMerchantName(Utils.systemConfiguration.getProperty("eps.server.merchant.name"));
-		order.setGenerator(csr.getApplicationSender() + csr.getWorkstationId());
+		order.setGenerator(csr.getApplicationSender() + "|" + csr.getWorkstationId());
 		order.setOrderTime(date.getTime());
 		order.setShiftNumber(csr.getPosData().getShiftNumber());
 		order.setClerkId(csr.getPosData().getClerkID());
