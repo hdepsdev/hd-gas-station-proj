@@ -7,7 +7,7 @@ import java.util.Map;
 import javax.annotation.Resource;
 
 import com.bhz.eps.dao.SaleItemMapper;
-import com.bhz.eps.entity.SaleItem;
+import com.bhz.eps.entity.SaleItemEntity;
 import com.bhz.eps.service.SaleItemService;
 import org.springframework.stereotype.Component;
 
@@ -18,12 +18,12 @@ public class SaleItemServiceImpl implements SaleItemService {
     SaleItemMapper saleItemMapper;
 	
 	@Override
-	public void addSaleItem(SaleItem saleItem) {
+	public void addSaleItem(SaleItemEntity saleItem) {
         saleItemMapper.insert(saleItem);
 	}
 
 	@Override
-	public List<SaleItem> getSaleItemsbyOrderId(String orderId) {
+	public List<SaleItemEntity> getSaleItemsbyOrderId(String orderId) {
         Map param = new HashMap<>();
         param.put("orderId", orderId);
 		return saleItemMapper.selectByParam(param);

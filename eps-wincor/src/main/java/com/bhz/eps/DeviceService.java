@@ -1,5 +1,7 @@
 package com.bhz.eps;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -8,11 +10,14 @@ import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.bhz.eps.codec.WincorPosMsgDecoder;
+import com.bhz.eps.codec.WincorPosMsgEncoder;
 import com.bhz.eps.entity.DeviceRequest;
 import com.bhz.eps.entity.DeviceResponse;
 import com.bhz.eps.entity.Order;
 import com.bhz.eps.processor.CardServiceRequestProcessor;
 import com.bhz.eps.util.Utils;
+import com.thoughtworks.xstream.XStream;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -60,6 +65,15 @@ public class DeviceService {
 		}
 	}
 	
+	public static void main(String[] args) {
+		DeviceService ds = DeviceService.getInstance("localhost", 4050);
+		
+		try {
+			ds.askBPosDisplay("正在支付，请稍后...", "13572468");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 	
 	public void askBPosDisplay(String message, String requestId) throws Exception{
 		Bootstrap boot = new Bootstrap();
@@ -71,6 +85,8 @@ public class DeviceService {
 				.handler(new ChannelInitializer<SocketChannel>(){	
 					@Override
 					protected void initChannel(SocketChannel ch) throws Exception {
+						ch.pipeline().addLast(new WincorPosMsgEncoder());
+						ch.pipeline().addLast(new WincorPosMsgDecoder());
 						ch.pipeline().addLast(new DeviceServiceMessageHandler(message, requestId));
 					}
 					
@@ -95,6 +111,14 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 	private static final Logger logger = LogManager.getLogger(DeviceServiceMessageHandler.class);
 	String message = "";
 	String requestId = "";
+	
+	private static XStream xstream;
+	static {
+		xstream = new XStream();
+		xstream.autodetectAnnotations(true);
+		xstream.ignoreUnknownElements();
+	}
+	
 	public DeviceServiceMessageHandler(String message, String requestId) {
 		this.message = message;
 		this.requestId = requestId;
@@ -120,7 +144,27 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 		dr.setRequestType("Output");
 		dr.setApplicationSender(Utils.systemConfiguration.getProperty("eps.server.applicationSender"));
 		dr.setWorkstationId(Utils.systemConfiguration.getProperty("eps.server.merchant.id"));
+		dr.setRequestId(this.requestId);
+		dr.setSequenceId("1");
 		
+		DeviceRequest.Output op = new DeviceRequest.Output();
+		op.setOutDeviceTarget("CashierDisplay");
+		
+		DeviceRequest.TextLine tl = new DeviceRequest.TextLine();
+		tl.setMenuItem("");
+		tl.setTimeout("");
+		tl.setErase("true");
+		tl.setContent(this.message);
+		
+		List<DeviceRequest.TextLine> textlineList = new ArrayList<DeviceRequest.TextLine>();
+		textlineList.add(tl);
+		op.setTextLines(textlineList);
+		dr.setOutput(op);
+
+		//DeviceRequest序列化为xml，并发送
+		String drxml = xstream.toXML(dr);
+		logger.debug(drxml);
+		ctx.write(drxml);		
 		ctx.flush();
 	}
 }

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.bhz.eps.entity.CardServiceRequest;
+import com.bhz.eps.entity.DeviceResponse;
 import com.bhz.eps.pdu.WincorPosPDU;
 import com.thoughtworks.xstream.XStream;
 
@@ -46,7 +47,11 @@ public class WincorPosMsgDecoder extends ByteToMessageDecoder {
 			out.add(request);
 		}
 		else if (xmlContent.contains("RequestType=\"Output\"")) {
-			
+			xstream.alias("DeviceResponse", DeviceResponse.class);
+			xstream.alias("Output", DeviceResponse.Output.class);
+			DeviceResponse response = (DeviceResponse) xstream
+					.fromXML(xmlContent);
+			out.add(response);
 		}
 		
 	}

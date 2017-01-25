@@ -1,6 +1,6 @@
 import com.bhz.eps.entity.Item;
 import com.bhz.eps.entity.Order;
-import com.bhz.eps.entity.SaleItem;
+import com.bhz.eps.entity.SaleItemEntity;
 import com.bhz.eps.service.ItemService;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.SaleItemService;
@@ -43,7 +43,7 @@ public class TestDB {
         order.setOriginalAmount(new BigDecimal(0));
         orderService.addOrder(order);
 
-        SaleItem saleItem = new SaleItem();
+        SaleItemEntity saleItem = new SaleItemEntity();
         saleItem.setId("testId");
         saleItem.setProductCode("testCode");
         saleItem.setOrderId("testOrder");
@@ -59,7 +59,7 @@ public class TestDB {
     public void testGet() throws Exception {
         Item item = itemService.getItembyCode("testCode");
         Order order = orderService.getOrderbyId("testOrder");
-        List<SaleItem> list = saleItemService.getSaleItemsbyOrderId("testOrder");
+        List<SaleItemEntity> list = saleItemService.getSaleItemsbyOrderId("testOrder");
         list.size();
     }
 }

@@ -2,9 +2,9 @@ package com.bhz.eps.service;
 
 import java.util.List;
 
-import com.bhz.eps.entity.SaleItem;
+import com.bhz.eps.entity.SaleItemEntity;
 
 public interface SaleItemService {
-	public void addSaleItem(SaleItem saleItem);
-	public List<SaleItem> getSaleItemsbyOrderId(String orderId);
+	public void addSaleItem(SaleItemEntity saleItem);
+	public List<SaleItemEntity> getSaleItemsbyOrderId(String orderId);
 }

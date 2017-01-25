@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.bhz.eps.entity.CardServiceResponse;
+import com.bhz.eps.pdu.WincorPosPDU;
 import com.thoughtworks.xstream.XStream;
 
 import io.netty.buffer.ByteBuf;
@@ -28,6 +29,7 @@ public class WincorPosMsgEncoder extends MessageToByteEncoder<Object> {
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
     	String content = (String)msg;
+    	content = WincorPosPDU.XML_HEADER + content;
     	
     	logger.info(content);
     	
