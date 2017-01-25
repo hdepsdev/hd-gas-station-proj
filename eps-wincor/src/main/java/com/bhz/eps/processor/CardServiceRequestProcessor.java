@@ -73,7 +73,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		DeviceService ds = DeviceService.getInstance("localhost", 4050);
 		
 		try {
-			ds.askBPosDisplay("正在支付，请稍后...", csr.getRequestId());
+			ds.askBPosDisplay("正在支付，请稍后...", order);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
