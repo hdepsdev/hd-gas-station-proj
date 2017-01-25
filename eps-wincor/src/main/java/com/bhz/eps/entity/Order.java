@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class Order implements java.io.Serializable{
+    public static final int STATUS_SUCCESS = 1;
+
 	private static final long serialVersionUID = 1147436830836898182L;
 	
 	@Getter @Setter
@@ -41,7 +43,7 @@ public class Order implements java.io.Serializable{
 	private BigDecimal loyaltyPoint;
 	
 	@Getter @Setter
-	private int status;
+	private int status;//1为支付完成
 }
 
 /*@XStreamAlias("order")
