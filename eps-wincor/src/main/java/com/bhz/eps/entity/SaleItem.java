@@ -1,0 +1,34 @@
+package com.bhz.eps.entity;
+
+import java.math.BigDecimal;
+
+import lombok.Getter;
+import lombok.Setter;
+
+public class SaleItem implements java.io.Serializable{
+	private static final long serialVersionUID = 7926713170885076453L;
+	
+	@Getter @Setter
+	private String id;
+	
+	@Getter @Setter
+	private String productCode;
+	
+	@Getter @Setter
+	private String unitMeasure;
+	
+	@Getter @Setter
+	private BigDecimal unitPrice;
+	
+	@Getter @Setter
+	private BigDecimal quantity;
+	
+	@Getter @Setter
+	private String itemCode;
+	
+	@Getter @Setter
+	private String orderId;
+	
+	@Getter @Setter
+	private BigDecimal amount;
+}
