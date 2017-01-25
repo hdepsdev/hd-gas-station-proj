@@ -39,6 +39,9 @@ public class Order implements java.io.Serializable{
 	
 	@Getter @Setter
 	private BigDecimal loyaltyPoint;
+	
+	@Getter @Setter
+	private int status;
 }
 
 /*@XStreamAlias("order")
