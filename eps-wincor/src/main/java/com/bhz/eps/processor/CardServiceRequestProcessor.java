@@ -29,10 +29,12 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		String timeString = "";
 		String bposTime = csr.getPosData().getPosTimestamp();
 		if(bposTime.indexOf("T")!=-1){
-			dateString = bposTime.substring(0, bposTime.indexOf("T")+1);
+			dateString = bposTime.substring(0, bposTime.indexOf("T"));
 			
 			if(bposTime.indexOf("+")!=-1){
-				timeString = bposTime.substring(bposTime.indexOf("T"),bposTime.indexOf("+"));
+				timeString = bposTime.substring(bposTime.indexOf("T")+1,bposTime.indexOf("+"));
+			}else if(bposTime.indexOf("-")!=-1){
+				timeString = bposTime.substring(bposTime.indexOf("T")+1,bposTime.lastIndexOf("-"));
 			}else{
 				timeString = bposTime.substring(bposTime.indexOf("T"),bposTime.length()-1);
 			}
