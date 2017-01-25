@@ -2,8 +2,10 @@ package com.bhz.eps;
 
 import io.netty.channel.Channel;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.bhz.eps.entity.CardServiceRequest;
 import com.bhz.eps.msg.BizMessageType;
@@ -33,8 +35,15 @@ public class Dispatcher {
 			BizProcessor processor = (BizProcessor) processorClass.newInstance();
 			processor.setChannel(channel);
 			processor.setMsgObject(msgObject);
-			executorService.submit(processor);
-		}
+            Future f = executorService.submit(processor);
+            try {
+                f.get();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
 		
 	}
 }
