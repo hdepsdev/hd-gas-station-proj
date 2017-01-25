@@ -6,11 +6,7 @@ import org.apache.logging.log4j.Logger;
 import com.bhz.eps.codec.TPDUDecoder;
 import com.bhz.eps.codec.TPDUEncoder;
 import com.bhz.eps.entity.Order;
-import com.bhz.eps.pdu.transpos.BizPDUData;
-import com.bhz.eps.pdu.transpos.BizPDUHeader;
-import com.bhz.eps.pdu.transpos.TPDU;
-import com.bhz.eps.pdu.transpos.TPDUBody;
-import com.bhz.eps.pdu.transpos.TPDUHeader;
+import com.bhz.eps.util.Converts;
 import com.bhz.eps.util.Utils;
 
 import io.netty.bootstrap.Bootstrap;
@@ -99,10 +95,36 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
 	
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		char padding = 0x20;
+		String strAppid = Utils.systemConfiguration.getProperty("weixin.appid");
+		String strMchid = Utils.systemConfiguration.getProperty("weixin.mchid");
+		String strNonce = Utils.systemConfiguration.getProperty("weixin.nonce");
+		String strSign = Utils.systemConfiguration.getProperty("weixin.sign");
+		String strTime = Long.toString(order.getOrderTime());
+		String strProductId = order.getOrderId();
 		
+		StringBuilder sb = new StringBuilder();
+		sb.append(Utils.rightPad(strAppid, 32, padding)).append(Utils.rightPad(strMchid, 32, padding))
+			.append(Utils.rightPad(strTime, 10, padding)).append(Utils.rightPad(strNonce, 32, padding))
+			.append(Utils.rightPad(strProductId, 32, padding)).append(Utils.rightPad(strSign, 32, padding));
+		
+		byte[] content = sb.toString().getBytes("utf-8");
+		
+		byte[] stationId = Converts.str2Bcd(order.getMerchantId());
+		int casherId = Integer.parseInt(order.getGenerator().split("|")[1]);
+		byte[] casherNo = Converts.int2U16(casherId);
+		byte[] magic = new byte[]{0x30,0x30,0x30,0x30};
+		byte[] cmd = new byte[]{'7','0'};
+		byte[] tag = new byte[]{'0','0'};
+		
+		byte[] tmp = Utils.concatTwoByteArray(stationId,casherNo);
+		byte[] tmp1 = Utils.concatTwoByteArray(tmp, magic);
+		byte[] tmp2 = Utils.concatTwoByteArray(tmp1, cmd);
+		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
+		byte[] result = Utils.concatTwoByteArray(tmp3, content);
 		
 		logger.debug("Send order to Trans POS.");
-		ctx.flush();
+		ctx.writeAndFlush(result);
 	}
 	
 }
