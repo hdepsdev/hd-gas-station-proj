@@ -1,16 +1,47 @@
 package com.bhz.eps.entity;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
-import com.bhz.eps.util.FormatedJsonHierarchicalStreamDriver;
-import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.annotations.XStreamAlias;
+public class Order implements java.io.Serializable{
+	private static final long serialVersionUID = 1147436830836898182L;
+	
+	@Getter @Setter
+	private String orderId;
+	
+	@Getter @Setter
+	private String merchantId;
+	
+	@Getter @Setter
+	private String merchantName;
+	
+	@Getter @Setter
+	private String generator;
+	
+	@Getter @Setter
+	private long orderTime;
+	
+	@Getter @Setter
+	private String shiftNumber;
+	
+	@Getter @Setter
+	private String clerkId;
+	
+	@Getter @Setter
+	private BigDecimal originalAmount;
+	
+	@Getter @Setter
+	private BigDecimal paymentAmount;
+	
+	@Getter @Setter
+	private BigDecimal couponAmount;
+	
+	@Getter @Setter
+	private BigDecimal loyaltyPoint;
+}
 
-import lombok.Data;
-
-@XStreamAlias("order")
+/*@XStreamAlias("order")
 @Data
 public class Order {
 	@XStreamAlias("id")
@@ -82,4 +113,4 @@ public class Order {
 		x.setMode(XStream.NO_REFERENCES);
 		System.out.println(x.toXML(order));
 	}
-}
+}*/
