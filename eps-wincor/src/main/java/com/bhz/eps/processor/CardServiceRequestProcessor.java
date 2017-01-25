@@ -63,22 +63,11 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		order.setShiftNumber(csr.getPosData().getShiftNumber());
 		order.setClerkId(csr.getPosData().getClerkID());
 		order.setOriginalAmount(csr.getTotalAmount());
-		OrderService ordersrv = EPSServer.appctx.getBean("orderService", OrderService.class);
-		ordersrv.addOrder(order);
+		//OrderService ordersrv = EPSServer.appctx.getBean("orderService", OrderService.class);
+		//ordersrv.addOrder(order);
 		//存储saleitems
 		SaleItemService saleItemsrv = EPSServer.appctx.getBean("saleItemService", SaleItemService.class);
-		for(com.bhz.eps.entity.CardServiceRequest.SaleItem item : csr.getSaleItemList()){
-			com.bhz.eps.entity.SaleItemEntity si = new com.bhz.eps.entity.SaleItemEntity();
-			si.setId(Utils.generateCompactUUID());
-			si.setProductCode(item.getProductCode());
-			si.setUnitMeasure(item.getUnitMeasure());
-			si.setUnitPrice(item.getUnitPrice());
-			si.setQuantity(item.getQuantity());
-			si.setItemCode(item.getItemId());
-			si.setOrderId(orderId);
-			si.setAmount(item.getAmount());
-			saleItemsrv.addSaleItem(si);
-		}	
+        saleItemsrv.saveSaleItems(order, csr.getSaleItemList());
 		
 		//请求设备显示支付等待
 		DeviceService ds = DeviceService.getInstance("localhost", 4050);
