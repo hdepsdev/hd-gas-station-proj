@@ -103,7 +103,7 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 			logger.debug("Processed sender: [ " + msg.getApplicationSender() + " ] 's order...");
 			ctx.channel().pipeline().remove(this);
 			//发送订单至公众号系统
-			DeviceService.this.submitOrderToWechat();
+			//DeviceService.this.submitOrderToWechat();
 		}else{
 			logger.error("No Response from BPOS on device request.");
 		}
