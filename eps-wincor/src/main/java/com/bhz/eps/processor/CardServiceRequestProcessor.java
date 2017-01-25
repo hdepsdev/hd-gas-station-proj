@@ -25,14 +25,28 @@ public class CardServiceRequestProcessor extends BizProcessor {
 	@Override
 	public void process() {
 		CardServiceRequest csr = (CardServiceRequest)this.getMsgObject();
+		String dateString="";
+		String timeString = "";
+		String bposTime = csr.getPosData().getPosTimestamp();
+		if(bposTime.indexOf("T")!=-1){
+			dateString = bposTime.substring(0, bposTime.indexOf("T")+1);
+			
+			if(bposTime.indexOf("+")!=-1){
+				timeString = bposTime.substring(bposTime.indexOf("T"),bposTime.indexOf("+"));
+			}else{
+				timeString = bposTime.substring(bposTime.indexOf("T"),bposTime.length()-1);
+			}
+			
+		}
+		
 		
 		//生成订单,存储数据库
 		//存储订单信息order
 		Order order = new Order();
 		Date date = new Date();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-ddTHH:mm:ss+8:00");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		try {
-			date = sdf.parse(csr.getPosData().getPosTimestamp());
+			date = sdf.parse(dateString + " " + timeString);
 		} catch (ParseException e1) {
 			e1.printStackTrace();
 		}
