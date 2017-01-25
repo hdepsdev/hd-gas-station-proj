@@ -33,16 +33,20 @@ public class WincorPosMsgDecoder extends ByteToMessageDecoder {
 		
 		byte[] content = new byte[in.readableBytes()];
 		in.readBytes(content);
+		String xmlContent = new String(content,"utf-8");
 		
-		logger.info(new String(content,"utf-8"));
+		logger.info(xmlContent);
 		
-		if (condition) {
+		if (xmlContent.contains("RequestType=\"CardPayment\"")) {
 			xstream.alias("CardServiceRequest", CardServiceRequest.class);
 			xstream.alias("POSdata", CardServiceRequest.PosData.class);
 			xstream.alias("SaleItem", CardServiceRequest.SaleItem.class);
 			CardServiceRequest request = (CardServiceRequest) xstream
-					.fromXML(new String(content, "utf-8"));
+					.fromXML(xmlContent);
 			out.add(request);
+		}
+		else if (xmlContent.contains("RequestType=\"Output\"")) {
+			
 		}
 		
 	}

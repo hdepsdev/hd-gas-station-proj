@@ -27,9 +27,7 @@ public class WincorPosMsgEncoder extends MessageToByteEncoder<Object> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
-    	CardServiceResponse response = (CardServiceResponse) msg;
-    	
-    	String content = xstream.toXML(response);
+    	String content = (String)msg;
     	
     	logger.info(content);
     	
