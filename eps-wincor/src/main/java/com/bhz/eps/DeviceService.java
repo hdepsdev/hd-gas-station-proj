@@ -69,13 +69,13 @@ public class DeviceService {
 		DeviceService ds = DeviceService.getInstance("localhost", 4050);
 		
 		try {
-			ds.askBPosDisplay("正在支付，请稍后...", "13572468");
+			//ds.askBPosDisplay("正在支付，请稍后...", "13572468");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public void askBPosDisplay(String message, String requestId) throws Exception{
+	public void askBPosDisplay(String message, Order order) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{
@@ -87,7 +87,7 @@ public class DeviceService {
 					protected void initChannel(SocketChannel ch) throws Exception {
 						ch.pipeline().addLast(new WincorPosMsgEncoder());
 						ch.pipeline().addLast(new WincorPosMsgDecoder());
-						ch.pipeline().addLast(new DeviceServiceMessageHandler(message, requestId));
+						ch.pipeline().addLast(new DeviceServiceMessageHandler(message, order));
 					}
 					
 				});
@@ -110,7 +110,7 @@ public class DeviceService {
 class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResponse>{
 	private static final Logger logger = LogManager.getLogger(DeviceServiceMessageHandler.class);
 	String message = "";
-	String requestId = "";
+	Order order;
 	
 	private static XStream xstream;
 	static {
@@ -119,9 +119,9 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 		xstream.ignoreUnknownElements();
 	}
 	
-	public DeviceServiceMessageHandler(String message, String requestId) {
+	public DeviceServiceMessageHandler(String message, Order order) {
 		this.message = message;
-		this.requestId = requestId;
+		this.order = order;
 	}
 	@Override
 	protected void messageReceived(ChannelHandlerContext ctx, DeviceResponse msg) throws Exception {
@@ -129,7 +129,10 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 			//解析呼叫结果，如果请求成功，则将订单发送至微信公众号系统，否则返回。
 			logger.debug("Processed sender: [ " + msg.getApplicationSender() + " ] 's order...");
 			ctx.channel().pipeline().remove(this);
-			//DeviceService.this.submitOrderToWechat();
+			//DeviceService.this.submitOrderToWechat(this.order);
+			TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"), 
+					Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).
+					sendOrderToTransPos(order);
 		}else{
 			logger.error("No Response from BPOS on device request.");
 		}
@@ -144,7 +147,7 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 		dr.setRequestType("Output");
 		dr.setApplicationSender(Utils.systemConfiguration.getProperty("eps.server.applicationSender"));
 		dr.setWorkstationId(Utils.systemConfiguration.getProperty("eps.server.merchant.id"));
-		dr.setRequestId(this.requestId);
+		dr.setRequestId(this.order.getOrderId().substring(this.order.getOrderId().length() - 8));
 		dr.setSequenceId("1");
 		
 		DeviceRequest.Output op = new DeviceRequest.Output();
