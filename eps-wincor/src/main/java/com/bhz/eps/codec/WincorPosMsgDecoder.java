@@ -36,13 +36,14 @@ public class WincorPosMsgDecoder extends ByteToMessageDecoder {
 		
 		logger.info(new String(content,"utf-8"));
 		
-		xstream.alias("CardServiceRequest", CardServiceRequest.class);
-		xstream.alias("POSdata", CardServiceRequest.PosData.class);
-		xstream.alias("SaleItem", CardServiceRequest.SaleItem.class);
-		
-		CardServiceRequest request = (CardServiceRequest) xstream.fromXML(new String(content,"utf-8"));
-		
-		out.add(request);
+		if (condition) {
+			xstream.alias("CardServiceRequest", CardServiceRequest.class);
+			xstream.alias("POSdata", CardServiceRequest.PosData.class);
+			xstream.alias("SaleItem", CardServiceRequest.SaleItem.class);
+			CardServiceRequest request = (CardServiceRequest) xstream
+					.fromXML(new String(content, "utf-8"));
+			out.add(request);
+		}
 		
 	}
 	

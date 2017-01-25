@@ -8,6 +8,7 @@ import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.bhz.eps.entity.DeviceRequest;
 import com.bhz.eps.entity.DeviceResponse;
 import com.bhz.eps.entity.Order;
 import com.bhz.eps.processor.CardServiceRequestProcessor;
@@ -60,7 +61,7 @@ public class DeviceService {
 	}
 	
 	
-	public void askBPosDisplay(String message) throws Exception{
+	public void askBPosDisplay(String message, String requestId) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{
@@ -70,7 +71,7 @@ public class DeviceService {
 				.handler(new ChannelInitializer<SocketChannel>(){	
 					@Override
 					protected void initChannel(SocketChannel ch) throws Exception {
-						ch.pipeline().addLast(new DeviceServiceMessageHandler(message));
+						ch.pipeline().addLast(new DeviceServiceMessageHandler(message, requestId));
 					}
 					
 				});
@@ -93,8 +94,10 @@ public class DeviceService {
 class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResponse>{
 	private static final Logger logger = LogManager.getLogger(DeviceServiceMessageHandler.class);
 	String message = "";
-	public DeviceServiceMessageHandler(String message) {
+	String requestId = "";
+	public DeviceServiceMessageHandler(String message, String requestId) {
 		this.message = message;
+		this.requestId = requestId;
 	}
 	@Override
 	protected void messageReceived(ChannelHandlerContext ctx, DeviceResponse msg) throws Exception {
@@ -102,7 +105,6 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 			//解析呼叫结果，如果请求成功，则将订单发送至微信公众号系统，否则返回。
 			logger.debug("Processed sender: [ " + msg.getApplicationSender() + " ] 's order...");
 			ctx.channel().pipeline().remove(this);
-			//发送订单至公众号系统
 			//DeviceService.this.submitOrderToWechat();
 		}else{
 			logger.error("No Response from BPOS on device request.");
@@ -113,6 +115,12 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		//发送屏显信息到BPOS
 		logger.debug("Send Display request to BPOS");
+		
+		DeviceRequest dr = new DeviceRequest();
+		dr.setRequestType("Output");
+		dr.setApplicationSender(Utils.systemConfiguration.getProperty("eps.server.applicationSender"));
+		dr.setWorkstationId(Utils.systemConfiguration.getProperty("eps.server.merchant.id"));
+		
 		ctx.flush();
 	}
 }
