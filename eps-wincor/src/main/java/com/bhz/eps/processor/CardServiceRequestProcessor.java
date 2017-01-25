@@ -3,9 +3,13 @@ package com.bhz.eps.processor;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.bhz.eps.DeviceService;
 import com.bhz.eps.EPSServer;
+import com.bhz.eps.TransPosDataSender;
 import com.bhz.eps.annotation.BizProcessorSpec;
 import com.bhz.eps.entity.CardServiceRequest;
 import com.bhz.eps.entity.Order;
@@ -13,6 +17,8 @@ import com.bhz.eps.msg.BizMessageType;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.SaleItemService;
 import com.bhz.eps.util.Utils;
+
+import javax.annotation.Resource;
 
 @BizProcessorSpec(msgType=BizMessageType.CARDSVR_REQUEST)
 public class CardServiceRequestProcessor extends BizProcessor {
@@ -66,8 +72,37 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		//
-	}
+
+        //轮询查询交易状态，当交易完成时停止轮询并将数据传出
+        ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
+        service.scheduleWithFixedDelay(new CheckStatus(service, orderId), 0, 1, TimeUnit.SECONDS);
+    }
+
+    class CheckStatus implements Runnable {
+        private ScheduledExecutorService service;
+        private String orderId;
+        @Resource
+        private OrderService orderService;
+
+        CheckStatus(ScheduledExecutorService service, String orderId) {
+            this.service = service;
+            this.orderId = orderId;
+        }
+
+        @Override
+        public void run() {
+            Order order = orderService.getOrderbyId(orderId);
+            if (Order.STATUS_SUCCESS == order.getStatus()) {
+                TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
+                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
+                try {
+                    sender.askPosToPrintReceipt(order);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                service.shutdownNow();
+            }
+        }
+    }
 
 }
