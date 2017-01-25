@@ -46,9 +46,4 @@
 		<aop:pointcut id="transactionPointcut" expression="execution(* com.bhz.eps.service.*.*(..))" />
 		<aop:advisor pointcut-ref="transactionPointcut" advice-ref="transactionAdvice" />
 	</aop:config>
-
-    <bean id="saleItemDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
-        <property name="sqlSessionFactory" ref="sqlSessionFactory" />
-        <property name="mapperInterface" value="com.bhz.eps.dao.SaleItemDao" />
-    </bean>
 </beans>
