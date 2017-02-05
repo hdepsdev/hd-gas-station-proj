@@ -1,156 +1,175 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.bhz.eps.dao.SaleItemMapper">
-  <resultMap id="BaseResultMap" type="com.bhz.eps.entity.SaleItemEntity">
-    <id column="id" jdbcType="VARCHAR" property="id" />
-    <result column="product_code" jdbcType="VARCHAR" property="productCode" />
-    <result column="unit_measure" jdbcType="VARCHAR" property="unitMeasure" />
-    <result column="unit_price" jdbcType="DECIMAL" property="unitPrice" />
-    <result column="quantity" jdbcType="DECIMAL" property="quantity" />
-    <result column="itemcode" jdbcType="VARCHAR" property="itemCode" />
-    <result column="order_id" jdbcType="VARCHAR" property="orderId" />
-    <result column="amount" jdbcType="DECIMAL" property="amount" />
-  </resultMap>
-  <sql id="Base_Column_List">
-    id, product_code, unit_measure, unit_price, quantity, itemcode, order_id, amount
-  </sql>
-  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
-    select 
-    <include refid="Base_Column_List" />
-    from saleitem
-    where id = #{id,jdbcType=VARCHAR}
-  </select>
-  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
-    delete from saleitem
-    where id = #{id,jdbcType=VARCHAR}
-  </delete>
-  <insert id="insert" parameterType="com.bhz.eps.entity.SaleItemEntity">
-    insert into saleitem (id, product_code, unit_measure, 
-      unit_price, quantity, itemcode, 
-      order_id, amount)
-    values (#{id,jdbcType=VARCHAR}, #{productCode,jdbcType=VARCHAR}, #{unitMeasure,jdbcType=VARCHAR}, 
-      #{unitPrice,jdbcType=DECIMAL}, #{quantity,jdbcType=DECIMAL}, #{itemCode,jdbcType=VARCHAR},
-      #{orderId,jdbcType=VARCHAR}, #{amount,jdbcType=DECIMAL})
-  </insert>
-  <insert id="insertSelective" parameterType="com.bhz.eps.entity.SaleItemEntity">
-    insert into saleitem
-    <trim prefix="(" suffix=")" suffixOverrides=",">
-      <if test="id != null">
-        id,
-      </if>
-      <if test="productCode != null">
-        product_code,
-      </if>
-      <if test="unitMeasure != null">
-        unit_measure,
-      </if>
-      <if test="unitPrice != null">
-        unit_price,
-      </if>
-      <if test="quantity != null">
-        quantity,
-      </if>
-      <if test="itemcode != null">
-        itemCode,
-      </if>
-      <if test="orderId != null">
-        order_id,
-      </if>
-      <if test="amount != null">
-        amount,
-      </if>
-    </trim>
-    <trim prefix="values (" suffix=")" suffixOverrides=",">
-      <if test="id != null">
-        #{id,jdbcType=VARCHAR},
-      </if>
-      <if test="productCode != null">
-        #{productCode,jdbcType=VARCHAR},
-      </if>
-      <if test="unitMeasure != null">
-        #{unitMeasure,jdbcType=VARCHAR},
-      </if>
-      <if test="unitPrice != null">
-        #{unitPrice,jdbcType=DECIMAL},
-      </if>
-      <if test="quantity != null">
-        #{quantity,jdbcType=DECIMAL},
-      </if>
-      <if test="itemCode != null">
-        #{itemCode,jdbcType=VARCHAR},
-      </if>
-      <if test="orderId != null">
-        #{orderId,jdbcType=VARCHAR},
-      </if>
-      <if test="amount != null">
-        #{amount,jdbcType=DECIMAL},
-      </if>
-    </trim>
-  </insert>
-  <update id="updateByPrimaryKeySelective" parameterType="com.bhz.eps.entity.SaleItemEntity">
-    update saleitem
-    <set>
-      <if test="productCode != null">
-        product_code = #{productCode,jdbcType=VARCHAR},
-      </if>
-      <if test="unitMeasure != null">
-        unit_measure = #{unitMeasure,jdbcType=VARCHAR},
-      </if>
-      <if test="unitPrice != null">
-        unit_price = #{unitPrice,jdbcType=DECIMAL},
-      </if>
-      <if test="quantity != null">
-        quantity = #{quantity,jdbcType=DECIMAL},
-      </if>
-      <if test="itemCode != null">
-        itemcode = #{itemCode,jdbcType=VARCHAR},
-      </if>
-      <if test="orderId != null">
-        order_id = #{orderId,jdbcType=VARCHAR},
-      </if>
-      <if test="amount != null">
-        amount = #{amount,jdbcType=DECIMAL},
-      </if>
-    </set>
-    where id = #{id,jdbcType=VARCHAR}
-  </update>
-  <update id="updateByPrimaryKey" parameterType="com.bhz.eps.entity.SaleItemEntity">
-    update saleitem
-    set product_code = #{productCode,jdbcType=VARCHAR},
-      unit_measure = #{unitMeasure,jdbcType=VARCHAR},
-      unit_price = #{unitPrice,jdbcType=DECIMAL},
-      quantity = #{quantity,jdbcType=DECIMAL},
-      itemcode = #{itemCode,jdbcType=VARCHAR},
-      order_id = #{orderId,jdbcType=VARCHAR},
-      amount = #{amount,jdbcType=DECIMAL}
-    where id = #{id,jdbcType=VARCHAR}
-  </update>
+	<resultMap id="BaseResultMap" type="com.bhz.eps.entity.SaleItemEntity">
+		<id column="id" jdbcType="VARCHAR" property="id" />
+		<result column="product_code" jdbcType="VARCHAR" property="productCode" />
+		<result column="unit_measure" jdbcType="VARCHAR" property="unitMeasure" />
+		<result column="unit_price" jdbcType="DECIMAL" property="unitPrice" />
+		<result column="quantity" jdbcType="DECIMAL" property="quantity" />
+		<result column="itemcode" jdbcType="VARCHAR" property="itemCode" />
+		<result column="order_id" jdbcType="VARCHAR" property="orderId" />
+		<result column="amount" jdbcType="DECIMAL" property="amount" />
+	</resultMap>
 
-    <select id="selectByParam" parameterType="java.util.Map" resultMap="BaseResultMap">
-        select
-        <include refid="Base_Column_List" />
-        from saleitem
-        where 1 = 1
-        <if test="productCode != null">
-            and product_code = #{productCode,jdbcType=VARCHAR}
-        </if>
-        <if test="unitMeasure != null">
-            and unit_measure = #{unitMeasure,jdbcType=VARCHAR}
-        </if>
-        <if test="unitPrice != null">
-            and unit_price = #{unitPrice,jdbcType=DECIMAL}
-        </if>
-        <if test="quantity != null">
-            and quantity = #{quantity,jdbcType=DECIMAL}
-        </if>
-        <if test="itemCode != null">
-            and itemcode = #{itemCode,jdbcType=VARCHAR}
-        </if>
-        <if test="orderId != null">
-            and order_id = #{orderId,jdbcType=VARCHAR}
-        </if>
-        <if test="amount != null">
-            and amount = #{amount,jdbcType=DECIMAL}
-        </if>
-    </select>
+	<resultMap type="com.bhz.eps.entity.SaleItemEntity" id="orderItemResult">
+		<id column="id" jdbcType="VARCHAR" property="id" />
+		<result column="product_code" jdbcType="VARCHAR" property="productCode" />
+		<result column="unit_measure" jdbcType="VARCHAR" property="unitMeasure" />
+		<result column="unit_price" jdbcType="DECIMAL" property="unitPrice" />
+		<result column="quantity" jdbcType="DECIMAL" property="quantity" />
+		<result column="itemcode" jdbcType="VARCHAR" property="itemCode" />
+		<result column="order_id" jdbcType="VARCHAR" property="orderId" />
+		<result column="amount" jdbcType="DECIMAL" property="amount" />
+		<result column="code" jdbcType="VARCHAR" property="code" />
+		<result column="name" jdbcType="VARCHAR" property="itemName" />
+		<result column="catalog" jdbcType="INTEGER" property="itemCatalog" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		id, product_code, unit_measure, unit_price, quantity, itemcode, order_id,
+		amount
+	</sql>
+	<select id="selectByPrimaryKey" parameterType="java.lang.String"
+		resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from saleitem
+		where id = #{id,jdbcType=VARCHAR}
+	</select>
+	<delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+		delete from saleitem
+		where id = #{id,jdbcType=VARCHAR}
+	</delete>
+	<insert id="insert" parameterType="com.bhz.eps.entity.SaleItemEntity">
+		insert into saleitem (id, product_code, unit_measure,
+		unit_price, quantity, itemcode,
+		order_id, amount)
+		values (#{id,jdbcType=VARCHAR}, #{productCode,jdbcType=VARCHAR},
+		#{unitMeasure,jdbcType=VARCHAR},
+		#{unitPrice,jdbcType=DECIMAL}, #{quantity,jdbcType=DECIMAL}, #{itemCode,jdbcType=VARCHAR},
+		#{orderId,jdbcType=VARCHAR}, #{amount,jdbcType=DECIMAL})
+	</insert>
+	<insert id="insertSelective" parameterType="com.bhz.eps.entity.SaleItemEntity">
+		insert into saleitem
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				id,
+			</if>
+			<if test="productCode != null">
+				product_code,
+			</if>
+			<if test="unitMeasure != null">
+				unit_measure,
+			</if>
+			<if test="unitPrice != null">
+				unit_price,
+			</if>
+			<if test="quantity != null">
+				quantity,
+			</if>
+			<if test="itemcode != null">
+				itemCode,
+			</if>
+			<if test="orderId != null">
+				order_id,
+			</if>
+			<if test="amount != null">
+				amount,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				#{id,jdbcType=VARCHAR},
+			</if>
+			<if test="productCode != null">
+				#{productCode,jdbcType=VARCHAR},
+			</if>
+			<if test="unitMeasure != null">
+				#{unitMeasure,jdbcType=VARCHAR},
+			</if>
+			<if test="unitPrice != null">
+				#{unitPrice,jdbcType=DECIMAL},
+			</if>
+			<if test="quantity != null">
+				#{quantity,jdbcType=DECIMAL},
+			</if>
+			<if test="itemCode != null">
+				#{itemCode,jdbcType=VARCHAR},
+			</if>
+			<if test="orderId != null">
+				#{orderId,jdbcType=VARCHAR},
+			</if>
+			<if test="amount != null">
+				#{amount,jdbcType=DECIMAL},
+			</if>
+		</trim>
+	</insert>
+	<update id="updateByPrimaryKeySelective" parameterType="com.bhz.eps.entity.SaleItemEntity">
+		update saleitem
+		<set>
+			<if test="productCode != null">
+				product_code = #{productCode,jdbcType=VARCHAR},
+			</if>
+			<if test="unitMeasure != null">
+				unit_measure = #{unitMeasure,jdbcType=VARCHAR},
+			</if>
+			<if test="unitPrice != null">
+				unit_price = #{unitPrice,jdbcType=DECIMAL},
+			</if>
+			<if test="quantity != null">
+				quantity = #{quantity,jdbcType=DECIMAL},
+			</if>
+			<if test="itemCode != null">
+				itemcode = #{itemCode,jdbcType=VARCHAR},
+			</if>
+			<if test="orderId != null">
+				order_id = #{orderId,jdbcType=VARCHAR},
+			</if>
+			<if test="amount != null">
+				amount = #{amount,jdbcType=DECIMAL},
+			</if>
+		</set>
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+	<update id="updateByPrimaryKey" parameterType="com.bhz.eps.entity.SaleItemEntity">
+		update saleitem
+		set product_code = #{productCode,jdbcType=VARCHAR},
+		unit_measure = #{unitMeasure,jdbcType=VARCHAR},
+		unit_price = #{unitPrice,jdbcType=DECIMAL},
+		quantity = #{quantity,jdbcType=DECIMAL},
+		itemcode = #{itemCode,jdbcType=VARCHAR},
+		order_id = #{orderId,jdbcType=VARCHAR},
+		amount = #{amount,jdbcType=DECIMAL}
+		where id = #{id,jdbcType=VARCHAR}
+	</update>
+
+	<select id="selectByParam" parameterType="java.util.Map"
+		resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from saleitem
+		where 1 = 1
+		<if test="productCode != null">
+			and product_code = #{productCode,jdbcType=VARCHAR}
+		</if>
+		<if test="unitMeasure != null">
+			and unit_measure = #{unitMeasure,jdbcType=VARCHAR}
+		</if>
+		<if test="unitPrice != null">
+			and unit_price = #{unitPrice,jdbcType=DECIMAL}
+		</if>
+		<if test="quantity != null">
+			and quantity = #{quantity,jdbcType=DECIMAL}
+		</if>
+		<if test="itemCode != null">
+			and itemcode = #{itemCode,jdbcType=VARCHAR}
+		</if>
+		<if test="orderId != null">
+			and order_id = #{orderId,jdbcType=VARCHAR}
+		</if>
+		<if test="amount != null">
+			and amount = #{amount,jdbcType=DECIMAL}
+		</if>
+	</select>
 </mapper>

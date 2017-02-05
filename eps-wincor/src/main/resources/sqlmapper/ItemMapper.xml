@@ -6,6 +6,15 @@
     <result column="name" jdbcType="VARCHAR" property="name" />
     <result column="catalog" jdbcType="INTEGER" property="catalog" />
   </resultMap>
+  <!-- 
+  <resultMap type="com.bhz.eps.entity.Item" id="itemAssociateSalesResult">
+  	<id column="code" jdbcType="VARCHAR" property="code" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="catalog" jdbcType="INTEGER" property="catalog" />
+    <collection property=""></collection>
+  </resultMap>
+  
+   -->
   <sql id="Base_Column_List">
     code, name, catalog
   </sql>

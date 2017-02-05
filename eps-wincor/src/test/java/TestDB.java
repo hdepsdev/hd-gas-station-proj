@@ -1,9 +1,12 @@
 import com.bhz.eps.entity.Item;
 import com.bhz.eps.entity.Order;
 import com.bhz.eps.entity.SaleItemEntity;
+import com.bhz.eps.entity.CardServiceRequest.SaleItem;
 import com.bhz.eps.service.ItemService;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.SaleItemService;
+import com.bhz.eps.util.Utils;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.test.context.ContextConfiguration;
@@ -13,6 +16,7 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by summer on 2017/01/25.
@@ -61,5 +65,16 @@ public class TestDB {
         Order order = orderService.getOrderbyId("testOrder");
         List<SaleItemEntity> list = saleItemService.getSaleItemsbyOrderId("testOrder");
         list.size();
+    }
+    
+    @Test
+    public void testOrderService1() {
+    	Order order = orderService.getOrderWithSaleItemsById("1");
+    	Set<SaleItemEntity> orderItems = order.getOrderItems();
+    	System.out.println("order id : " + order.getOrderId() + "\tOriginal Amount" + order.getOriginalAmount());
+    	System.out.println("============== Details ==============");
+    	for(SaleItemEntity sie:orderItems){
+    		System.out.println("Sale Item id: " + sie.getId() + "\tQuantity: " + sie.getQuantity() + "\tAmount: " + sie.getAmount() +"\tPrice: "+ sie.getUnitPrice() + "\tItem Name: " + sie.getItemName());
+    	}
     }
 }

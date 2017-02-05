@@ -22,4 +22,9 @@ public class OrderServiceImpl implements OrderService{
 		return orderMapper.selectByPrimaryKey(orderId);
 	}
 
+	@Override
+	public Order getOrderWithSaleItemsById(String orderId) {
+		return orderMapper.getOrderWithItemsById(orderId);
+	}
+
 }

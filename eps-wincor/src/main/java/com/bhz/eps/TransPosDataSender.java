@@ -1,15 +1,20 @@
 package com.bhz.eps;
 
+import java.math.BigDecimal;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.bhz.eps.codec.TPDUDecoder;
 import com.bhz.eps.codec.TPDUEncoder;
 import com.bhz.eps.entity.Order;
+import com.bhz.eps.entity.SaleItemEntity;
 import com.bhz.eps.util.Converts;
 import com.bhz.eps.util.Utils;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -76,7 +81,36 @@ public class TransPosDataSender {
 	}
 	
 	public void askPosToPrintReceipt(Order order) throws Exception{
-		
+		Bootstrap boot = new Bootstrap();
+		EventLoopGroup worker = new NioEventLoopGroup();
+		try{
+			boot.group(worker).option(ChannelOption.TCP_NODELAY, true)
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Integer.parseInt(Utils.systemConfiguration.getProperty("eps.client.data.upload.timeout")))
+				.channel(NioSocketChannel.class)
+				.handler(new ChannelInitializer<SocketChannel>(){
+
+					@Override
+					protected void initChannel(SocketChannel ch) throws Exception {
+						ch.pipeline().addLast(new TPDUEncoder());
+						ch.pipeline().addLast(new TPDUDecoder());
+						ch.pipeline().addLast(new SendReceiptHandler(order));
+					}
+					
+				});
+			ChannelFuture cf = boot.connect(this.transPosIP, this.transPosPort).sync();
+			cf.addListener(new ChannelFutureListener() {
+				
+				@Override
+				public void operationComplete(ChannelFuture future) throws Exception {
+					logger.debug("Established connection to " + transPosIP + " on port " + transPosPort);
+				}
+				
+			});
+			cf.channel().closeFuture().sync();
+				
+		}finally{
+			worker.shutdownGracefully();
+		}
 	}
 }
 
@@ -125,6 +159,52 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
 		
 		logger.debug("Send order to Trans POS.");
 		ctx.writeAndFlush(result);
+	}
+	
+}
+
+class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
+	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
+	Order order;
+	
+	public SendReceiptHandler(Order order) {
+		this.order = order;
+	}
+	@Override
+	protected void messageReceived(ChannelHandlerContext ctx, Order msg) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		char padding = 0x20;
+		ByteBuf b = Unpooled.buffer(69,201);
+		//交易流水号
+		String orderId = order.getOrderId().substring(order.getOrderId().length()-8);
+		b.writeBytes(Converts.str2Bcd(orderId));
+		//交易时间
+		b.writeBytes(Converts.long2U32(order.getOrderTime()));
+		//应收金额
+		b.writeBytes(Converts.long2U32(order.getOriginalAmount().multiply(new BigDecimal(100)).longValue()));
+		//实付金额
+		b.writeBytes(Converts.long2U32(order.getPaymentAmount().multiply(new BigDecimal(100)).longValue()));
+		//优惠券优惠金额
+		b.writeBytes(Converts.long2U32(order.getCouponAmount().multiply(new BigDecimal(100)).longValue()));
+		//此次消费获得积分
+		b.writeBytes(Converts.long2U32(order.getLoyaltyPoint().longValue()));
+		//消费信息总条数
+		b.writeByte(order.getOrderItems().size());
+		//循环填充交易明细
+		for(SaleItemEntity sie:order.getOrderItems()){
+			b.writeBytes(Utils.rightPad(sie.getItemName(), 32, padding).getBytes());
+			b.writeInt(sie.getQuantity().multiply(new BigDecimal(100)).intValue());
+			b.writeInt(sie.getUnitPrice().multiply(new BigDecimal(100)).intValue());
+			b.writeInt(sie.getAmount().multiply(new BigDecimal(100)).intValue());
+		}
+		
+		logger.debug("Send receipt to Trans POS.");
+		ctx.writeAndFlush(b.array());
 	}
 	
 }

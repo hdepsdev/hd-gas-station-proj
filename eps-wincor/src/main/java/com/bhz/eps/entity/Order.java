@@ -1,6 +1,10 @@
 package com.bhz.eps.entity;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
+
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -44,6 +48,17 @@ public class Order implements java.io.Serializable{
 	
 	@Getter @Setter
 	private int status;//1为支付完成
+	
+	@Getter @Setter
+	private Set<SaleItemEntity> orderItems = new HashSet<SaleItemEntity>();
+	
+	//Virtual Property
+	@Getter @Setter
+	private String itemCode;
+	@Getter @Setter
+	private String itemName;
+	@Getter @Setter
+	private String itemCatalog;
 }
 
 /*@XStreamAlias("order")

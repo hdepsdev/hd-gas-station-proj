@@ -5,30 +5,49 @@ import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
 
-public class SaleItemEntity implements java.io.Serializable{
+public class SaleItemEntity implements java.io.Serializable {
 	private static final long serialVersionUID = 7926713170885076453L;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private String id;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private String productCode;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private String unitMeasure;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private BigDecimal unitPrice;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private BigDecimal quantity;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private String itemCode;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private String orderId;
-	
-	@Getter @Setter
+
+	@Getter
+	@Setter
 	private BigDecimal amount;
+
+	// Virtual Property
+	@Getter
+	@Setter
+	private String code;
+	@Getter
+	@Setter
+	private String itemName;
+	@Getter
+	@Setter
+	private String itemCatalog;
 }

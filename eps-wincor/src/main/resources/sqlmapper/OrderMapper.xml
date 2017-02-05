@@ -15,6 +15,23 @@
     <result column="loyalty_point" jdbcType="BIGINT" property="loyaltyPoint" />
     <result column="status" jdbcType="TINYINT" property="status" />
   </resultMap>
+  
+  <resultMap type="com.bhz.eps.entity.Order" id="orderWithSaleItemsResult">
+  	<id column="order_id" jdbcType="VARCHAR" property="orderId" />
+    <result column="merchant_id" jdbcType="VARCHAR" property="merchantId" />
+    <result column="merchant_name" jdbcType="VARCHAR" property="merchantName" />
+    <result column="generator" jdbcType="VARCHAR" property="generator" />
+    <result column="order_time" jdbcType="BIGINT" property="orderTime" />
+    <result column="shift_number" jdbcType="VARCHAR" property="shiftNumber" />
+    <result column="clerk_id" jdbcType="VARCHAR" property="clerkId" />
+    <result column="original_amount" jdbcType="DECIMAL" property="originalAmount" />
+    <result column="payment_amount" jdbcType="DECIMAL" property="paymentAmount" />
+    <result column="coupon_amount" jdbcType="DECIMAL" property="couponAmount" />
+    <result column="loyalty_point" jdbcType="BIGINT" property="loyaltyPoint" />
+    <result column="status" jdbcType="TINYINT" property="status" />
+    <collection property="orderItems" resultMap="com.bhz.eps.dao.SaleItemMapper.orderItemResult"></collection>
+  </resultMap>
+  
   <sql id="Base_Column_List">
     order_id, merchant_id, merchant_name, generator, order_time, shift_number, clerk_id, 
     original_amount, payment_amount, coupon_amount, loyalty_point, status
@@ -25,6 +42,11 @@
     from `order`
     where order_id = #{orderId,jdbcType=VARCHAR}
   </select>
+  
+  <select id="getOrderWithItemsById" resultMap="orderWithSaleItemsResult">
+		select * from `order` as o, saleitem s ,item i where o.order_id=#{orderId} and s.order_id=o.order_id and s.`product_code`=i.`code`
+  </select>
+  
   <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
     delete from `order`
     where order_id = #{orderId,jdbcType=VARCHAR}

@@ -96,7 +96,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
 
         @Override
         public void run() {
-            Order order = orderService.getOrderbyId(orderId);
+            Order order = orderService.getOrderWithSaleItemsById(orderId);
             if (Order.STATUS_SUCCESS == order.getStatus()) {
                 TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
                         Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
