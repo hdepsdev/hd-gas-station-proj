@@ -34,10 +34,10 @@ public class DeviceRequest {
 	@XStreamAlias("SequenceID")
 	@XStreamAsAttribute
 	private String sequenceId;
-	
+
+    @XStreamAlias("Output")
 	private Output output;
-	
-	@XStreamAlias("Output")
+
 	@Data
 	public static class Output{
 		@XStreamAlias("OutDeviceTarget")
