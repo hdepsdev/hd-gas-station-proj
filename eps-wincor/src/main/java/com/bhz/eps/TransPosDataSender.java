@@ -175,6 +175,12 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
 		// TODO Auto-generated method stub
 		
 	}
+
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+            throws Exception {
+        logger.error("", cause);
+        super.exceptionCaught(ctx, cause);
+    }
 	
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -188,11 +194,23 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
 		//应收金额
 		b.writeBytes(Converts.long2U32(order.getOriginalAmount().multiply(new BigDecimal(100)).longValue()));
 		//实付金额
-		b.writeBytes(Converts.long2U32(order.getPaymentAmount().multiply(new BigDecimal(100)).longValue()));
+        if (order.getPaymentAmount() != null) {
+            b.writeBytes(Converts.long2U32(order.getPaymentAmount().multiply(new BigDecimal(100)).longValue()));
+        } else {
+            b.writeBytes(Converts.long2U32(0));
+        }
 		//优惠券优惠金额
-		b.writeBytes(Converts.long2U32(order.getCouponAmount().multiply(new BigDecimal(100)).longValue()));
+        if (order.getCouponAmount() != null) {
+            b.writeBytes(Converts.long2U32(order.getCouponAmount().multiply(new BigDecimal(100)).longValue()));
+        } else {
+            b.writeBytes(Converts.long2U32(0));
+        }
 		//此次消费获得积分
-		b.writeBytes(Converts.long2U32(order.getLoyaltyPoint().longValue()));
+        if (order.getLoyaltyPoint() != null) {
+            b.writeBytes(Converts.long2U32(order.getLoyaltyPoint().longValue()));
+        } else {
+            b.writeBytes(Converts.long2U32(0));
+        }
 		//消费信息总条数
 		b.writeByte(order.getOrderItems().size());
 		//循环填充交易明细
