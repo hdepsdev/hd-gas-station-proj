@@ -68,13 +68,14 @@ public class CardServiceRequestProcessor extends BizProcessor {
         saleItemsrv.saveSaleItems(order, csr.getSaleItemList());
 		
 		//请求设备显示支付等待
-//		DeviceService ds = DeviceService.getInstance("localhost", 4050);
-//
-//		try {
-//			ds.askBPosDisplay("正在支付，请稍后...", order);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
+		DeviceService ds = DeviceService.getInstance(Utils.systemConfiguration.getProperty("eps.bpos.ds.ip"), 
+				Integer.parseInt(Utils.systemConfiguration.getProperty("eps.bpos.ds.port")));
+
+		try {
+			ds.askBPosDisplay("正在支付，请稍后...", order);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
         //轮询查询交易状态，当交易完成时停止轮询并将数据传出
         ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
