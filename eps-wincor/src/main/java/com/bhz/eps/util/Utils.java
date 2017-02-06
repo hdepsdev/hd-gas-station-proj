@@ -80,10 +80,7 @@ public class Utils {
 	public static byte[] genTPDUHeader(long tpduLength) {
 		ByteBuf bb = Unpooled.buffer(9);
 		bb.writeByte(0x1b).writeByte(0x10);
-		ByteBuf lengthBuf = Unpooled.buffer(4);
-		lengthBuf.order(ByteOrder.LITTLE_ENDIAN);
-		lengthBuf.writeInt((int)tpduLength);
-		bb.writeBytes(lengthBuf);
+		bb.order(ByteOrder.LITTLE_ENDIAN).writeInt((int)tpduLength);
 		bb.writeByte(0x01);
 		bb.writeShort(0x0000);
 		byte[] data = bb.array();
