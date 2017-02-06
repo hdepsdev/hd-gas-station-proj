@@ -3,9 +3,7 @@ package com.bhz.eps.processor;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import com.bhz.eps.DeviceService;
 import com.bhz.eps.EPSServer;
@@ -70,24 +68,30 @@ public class CardServiceRequestProcessor extends BizProcessor {
         saleItemsrv.saveSaleItems(order, csr.getSaleItemList());
 		
 		//请求设备显示支付等待
-		DeviceService ds = DeviceService.getInstance("localhost", 4050);
-		
-		try {
-			ds.askBPosDisplay("正在支付，请稍后...", order);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		DeviceService ds = DeviceService.getInstance("localhost", 4050);
+//
+//		try {
+//			ds.askBPosDisplay("正在支付，请稍后...", order);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 
         //轮询查询交易状态，当交易完成时停止轮询并将数据传出
         ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
-        service.scheduleWithFixedDelay(new CheckStatus(service, orderId), 0, 1, TimeUnit.SECONDS);
+        ScheduledFuture f = service.scheduleWithFixedDelay(new CheckStatus(service, orderId), 0, 1, TimeUnit.SECONDS);
+        try {
+            f.get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
     }
 
     class CheckStatus implements Runnable {
         private ScheduledExecutorService service;
         private String orderId;
-        @Resource
-        private OrderService orderService;
+        private OrderService orderService = EPSServer.appctx.getBean("orderService", OrderService.class);
 
         CheckStatus(ScheduledExecutorService service, String orderId) {
             this.service = service;
