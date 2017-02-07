@@ -127,7 +127,13 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
 		// TODO Auto-generated method stub
 		
 	}
-	
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+            throws Exception {
+        logger.error("", cause);
+        super.exceptionCaught(ctx, cause);
+    }
+
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		char padding = 0x20;
@@ -159,6 +165,7 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
 		byte[] result = Utils.concatTwoByteArray(tmp3, content);
 		
 		logger.debug("Send order to Trans POS.");
+        logger.debug(Arrays.toString(result));
 		ctx.writeAndFlush(result);
 	}
 	
