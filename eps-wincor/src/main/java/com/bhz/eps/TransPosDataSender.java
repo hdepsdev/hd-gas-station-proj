@@ -1,6 +1,7 @@
 package com.bhz.eps;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -234,6 +235,7 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
 		}
 		byte[] result = Utils.concatTwoByteArray(tmp3, b.array());
 		logger.debug("Send receipt to Trans POS.");
+        logger.debug(Arrays.toString(result));
 		ctx.writeAndFlush(result);
 	}
 	
