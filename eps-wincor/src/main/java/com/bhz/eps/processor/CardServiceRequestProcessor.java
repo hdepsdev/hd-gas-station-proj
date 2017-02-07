@@ -100,13 +100,6 @@ public class CardServiceRequestProcessor extends BizProcessor {
         //轮询查询交易状态，当交易完成时停止轮询并将数据传出
         ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
         ScheduledFuture f = service.scheduleWithFixedDelay(new CheckStatus(service, orderId, channel, csr), 0, 1, TimeUnit.SECONDS);
-        try {
-            f.get();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        }
     }
 
     class CheckStatus implements Runnable {
@@ -125,66 +118,74 @@ public class CardServiceRequestProcessor extends BizProcessor {
 
         @Override
         public void run() {
-            Order order = orderService.getOrderWithSaleItemsById(orderId);
-            if (Order.STATUS_SUCCESS == order.getStatus()) {
-                TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
-                                    
+            try {
+                Order order = orderService.getOrderWithSaleItemsById(orderId);
+                if (Order.STATUS_SUCCESS == order.getStatus()) {
+                    TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
+                            Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
+
                     ExecutorService cardResponseService = Executors.newFixedThreadPool(1);
                     ExecutorService printReceiptService = Executors.newFixedThreadPool(1);
-                    
-                    cardResponseService.execute(new Runnable(){
-                    	
-						@Override
-						public void run() {
-							// TODO Auto-generated method stub
-							//获取订单相关信息
-							CardServiceResponse csr = new CardServiceResponse();
-							csr.setRequestType(cardServiceRequest.getRequestType());
-							csr.setApplicationSender(cardServiceRequest.getApplicationSender());
-							csr.setWorkstationId(cardServiceRequest.getWorkstationId());
-							csr.setPopId(cardServiceRequest.getPopId());
-							csr.setRequestId(cardServiceRequest.getRequestId());
-							csr.setOverallResult("Success");
-							
-							Tender tender = new Tender();
-							
-							TotalAmount totalAmount = new TotalAmount();
-							totalAmount.setTotalAmount(order.getPaymentAmount());
-							totalAmount.setPaymentAmount(order.getPaymentAmount());
-							totalAmount.setRebateAmount(order.getCouponAmount());
-							totalAmount.setOriginalAmount(order.getOriginalAmount());
-							tender.setTotalAmount(totalAmount);
-							
-							Authorisation authorisation = new Authorisation();
-							authorisation.setAcquirerid("0010");
-							tender.setAuthorisation(authorisation);
-							//CardServiceResponse序列化为xml，并发送
-							String csrxml = xstream.toXML(csr);
-							logger.debug(csrxml);
-							channel.write(csrxml);		
-							channel.flush();							
-						}
-                    	
-                    });
-                    
-                    printReceiptService.execute(new Runnable(){
 
-						@Override
-						public void run() {
-							// TODO Auto-generated method stub
-							try {
-								sender.askPosToPrintReceipt(order);
-							} catch (Exception e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}                    	
+                    cardResponseService.execute(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            try {
+                                // TODO Auto-generated method stub
+                                //获取订单相关信息
+                                CardServiceResponse csr = new CardServiceResponse();
+                                csr.setRequestType(cardServiceRequest.getRequestType());
+                                csr.setApplicationSender(cardServiceRequest.getApplicationSender());
+                                csr.setWorkstationId(cardServiceRequest.getWorkstationId());
+                                csr.setPopId(cardServiceRequest.getPopId());
+                                csr.setRequestId(cardServiceRequest.getRequestId());
+                                csr.setOverallResult("Success");
+
+                                Tender tender = new Tender();
+
+                                TotalAmount totalAmount = new TotalAmount();
+                                totalAmount.setTotalAmount(order.getPaymentAmount());
+                                totalAmount.setPaymentAmount(order.getPaymentAmount());
+                                totalAmount.setRebateAmount(order.getCouponAmount());
+                                totalAmount.setOriginalAmount(order.getOriginalAmount());
+                                tender.setTotalAmount(totalAmount);
+
+                                Authorisation authorisation = new Authorisation();
+                                authorisation.setAcquirerid("0010");
+                                tender.setAuthorisation(authorisation);
+                                //CardServiceResponse序列化为xml，并发送
+                                String csrxml = xstream.toXML(csr);
+                                logger.debug(csrxml);
+                                channel.write(csrxml);
+                                channel.flush();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
                     });
-                    
-                cardResponseService.shutdown();
-                printReceiptService.shutdown();
-                service.shutdownNow();
+
+                    printReceiptService.execute(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            // TODO Auto-generated method stub
+                            try {
+                                sender.askPosToPrintReceipt(order);
+                            } catch (Exception e) {
+                                // TODO Auto-generated catch block
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+
+                    cardResponseService.shutdown();
+                    printReceiptService.shutdown();
+                    service.shutdownNow();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }
