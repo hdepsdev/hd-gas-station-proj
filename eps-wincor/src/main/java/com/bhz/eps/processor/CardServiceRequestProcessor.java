@@ -1,25 +1,40 @@
 package com.bhz.eps.processor;
 
+import io.netty.channel.Channel;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.*;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.bhz.eps.DeviceService;
 import com.bhz.eps.EPSServer;
 import com.bhz.eps.TransPosDataSender;
 import com.bhz.eps.annotation.BizProcessorSpec;
 import com.bhz.eps.entity.CardServiceRequest;
+import com.bhz.eps.entity.CardServiceResponse;
+import com.bhz.eps.entity.CardServiceResponse.Tender.*;
+import com.bhz.eps.entity.CardServiceResponse.*;
 import com.bhz.eps.entity.Order;
 import com.bhz.eps.msg.BizMessageType;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.SaleItemService;
 import com.bhz.eps.util.Utils;
-
-import javax.annotation.Resource;
+import com.thoughtworks.xstream.XStream;
 
 @BizProcessorSpec(msgType=BizMessageType.CARDSVR_REQUEST)
 public class CardServiceRequestProcessor extends BizProcessor {
+	private static XStream xstream;
+	static {
+		xstream = new XStream();
+		xstream.autodetectAnnotations(true);
+		xstream.ignoreUnknownElements();
+	}
+	private static final Logger logger = LogManager.getLogger(CardServiceRequestProcessor.class);
+	
 	@Override
 	public void process() {
 		CardServiceRequest csr = (CardServiceRequest)this.getMsgObject();
@@ -79,7 +94,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
 
         //轮询查询交易状态，当交易完成时停止轮询并将数据传出
         ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
-        ScheduledFuture f = service.scheduleWithFixedDelay(new CheckStatus(service, orderId), 0, 1, TimeUnit.SECONDS);
+        ScheduledFuture f = service.scheduleWithFixedDelay(new CheckStatus(service, orderId, channel, csr), 0, 1, TimeUnit.SECONDS);
         try {
             f.get();
         } catch (InterruptedException e) {
@@ -92,11 +107,15 @@ public class CardServiceRequestProcessor extends BizProcessor {
     class CheckStatus implements Runnable {
         private ScheduledExecutorService service;
         private String orderId;
+        private Channel channel;
+        private CardServiceRequest cardServiceRequest;
         private OrderService orderService = EPSServer.appctx.getBean("orderService", OrderService.class);
-
-        CheckStatus(ScheduledExecutorService service, String orderId) {
+        
+        CheckStatus(ScheduledExecutorService service, String orderId, Channel channel, CardServiceRequest cardservicerequest) {
             this.service = service;
             this.orderId = orderId;
+            this.channel = channel;
+            this.cardServiceRequest = cardservicerequest;
         }
 
         @Override
@@ -105,11 +124,61 @@ public class CardServiceRequestProcessor extends BizProcessor {
             if (Order.STATUS_SUCCESS == order.getStatus()) {
                 TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
                         Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
-                try {
-                    sender.askPosToPrintReceipt(order);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                                    
+                    ExecutorService cardResponseService = Executors.newFixedThreadPool(1);
+                    ExecutorService printReceiptService = Executors.newFixedThreadPool(1);
+                    
+                    cardResponseService.execute(new Runnable(){
+                    	
+						@Override
+						public void run() {
+							// TODO Auto-generated method stub
+							//获取订单相关信息
+							CardServiceResponse csr = new CardServiceResponse();
+							csr.setRequestType(cardServiceRequest.getRequestType());
+							csr.setApplicationSender(cardServiceRequest.getApplicationSender());
+							csr.setWorkstationId(cardServiceRequest.getWorkstationId());
+							csr.setPopId(cardServiceRequest.getPopId());
+							csr.setRequestId(cardServiceRequest.getRequestId());
+							csr.setOverallResult("Success");
+							
+							Tender tender = new Tender();
+							
+							TotalAmount totalAmount = new TotalAmount();
+							totalAmount.setTotalAmount(order.getPaymentAmount());
+							totalAmount.setPaymentAmount(order.getPaymentAmount());
+							totalAmount.setRebateAmount(order.getCouponAmount());
+							totalAmount.setOriginalAmount(order.getOriginalAmount());
+							tender.setTotalAmount(totalAmount);
+							
+							Authorisation authorisation = new Authorisation();
+							authorisation.setAcquirerid("0010");
+							tender.setAuthorisation(authorisation);
+							//CardServiceResponse序列化为xml，并发送
+							String csrxml = xstream.toXML(csr);
+							logger.debug(csrxml);
+							channel.write(csrxml);		
+							channel.flush();							
+						}
+                    	
+                    });
+                    
+                    printReceiptService.execute(new Runnable(){
+
+						@Override
+						public void run() {
+							// TODO Auto-generated method stub
+							try {
+								sender.askPosToPrintReceipt(order);
+							} catch (Exception e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}                    	
+                    });
+                    
+                cardResponseService.shutdown();
+                printReceiptService.shutdown();
                 service.shutdownNow();
             }
         }

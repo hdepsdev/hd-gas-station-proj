@@ -3,7 +3,6 @@ package com.bhz.eps.codec;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.bhz.eps.entity.CardServiceResponse;
 import com.bhz.eps.pdu.WincorPosPDU;
 import com.thoughtworks.xstream.XStream;
 
@@ -33,12 +32,13 @@ public class WincorPosMsgEncoder extends MessageToByteEncoder<Object> {
     	
     	logger.info(content);
     	
-    	byte[] lv = new byte[content.length() + 4];
-    	lv[0] = (byte)(content.length()>>24);
-    	lv[1] = (byte)(content.length()>>16);
-    	lv[2] = (byte)(content.length()>>8);
-    	lv[3] = (byte)(content.length()&0xFF);
-    	System.arraycopy(content.getBytes("UTF-8"), 0, lv, 4, content.length());
+    	int length = content.getBytes("UTF-8").length;
+    	byte[] lv = new byte[length + 4];
+    	lv[0] = (byte)(length>>24);
+    	lv[1] = (byte)(length>>16);
+    	lv[2] = (byte)(length>>8);
+    	lv[3] = (byte)(length&0xFF);
+    	System.arraycopy(content.getBytes("UTF-8"), 0, lv, 4, length);
     	
     	out.writeBytes(lv);
     }
