@@ -35,14 +35,7 @@ public class Dispatcher {
 			BizProcessor processor = (BizProcessor) processorClass.newInstance();
 			processor.setChannel(channel);
 			processor.setMsgObject(msgObject);
-            Future f = executorService.submit(processor);
-            try {
-                f.get();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            }
+            executorService.submit(processor);
         }
 		
 	}
