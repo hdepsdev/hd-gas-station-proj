@@ -72,7 +72,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		order.setMerchantId(merchantId);
 		order.setMerchantName(Utils.systemConfiguration.getProperty("eps.server.merchant.name"));
 		order.setGenerator(csr.getApplicationSender() + "|" + csr.getWorkstationId());
-		order.setOrderTime(date.getTime());
+		order.setOrderTime(date.getTime()/1000);//将毫秒转为秒
 		order.setShiftNumber(csr.getPosData().getShiftNumber());
 		order.setClerkId(csr.getPosData().getClerkID());
 		order.setOriginalAmount(csr.getTotalAmount());
