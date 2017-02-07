@@ -62,8 +62,8 @@ public class TestDB {
     @Test
     public void testGet() throws Exception {
         Item item = itemService.getItembyCode("testCode");
-        Order order = orderService.getOrderbyId("testOrder");
-        List<SaleItemEntity> list = saleItemService.getSaleItemsbyOrderId("testOrder");
+        Order order = orderService.getOrderbyId("201701251001011");
+        List<SaleItemEntity> list = saleItemService.getSaleItemsbyOrderId("201701251001012");
         list.size();
     }
     

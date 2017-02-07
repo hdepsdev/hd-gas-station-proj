@@ -2,6 +2,7 @@ package com.bhz.eps.util;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteOrder;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Properties;
@@ -79,7 +80,7 @@ public class Utils {
 	public static byte[] genTPDUHeader(long tpduLength) {
 		ByteBuf bb = Unpooled.buffer(9);
 		bb.writeByte(0x1b).writeByte(0x10);
-		bb.writeInt((int) tpduLength);
+		bb.order(ByteOrder.LITTLE_ENDIAN).writeInt((int)tpduLength);
 		bb.writeByte(0x01);
 		bb.writeShort(0x0000);
 		byte[] data = bb.array();

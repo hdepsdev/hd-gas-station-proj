@@ -166,8 +166,7 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 		//DeviceRequest序列化为xml，并发送
 		String drxml = xstream.toXML(dr);
 		logger.debug(drxml);
-		ctx.write(drxml);		
-		ctx.flush();
+		ctx.writeAndFlush(drxml);
 	}
 }
 

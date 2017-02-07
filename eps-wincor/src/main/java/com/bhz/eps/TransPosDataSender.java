@@ -145,7 +145,7 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
 		byte[] content = sb.toString().getBytes("utf-8");
 		
 		byte[] stationId = Converts.str2Bcd(order.getMerchantId());
-		int casherId = Integer.parseInt(order.getGenerator().split("|")[1]);
+		int casherId = Integer.parseInt(order.getGenerator().split("\\|")[1]);
 		byte[] casherNo = Converts.int2U16(casherId);
 		byte[] magic = new byte[]{0x30,0x30,0x30,0x30};
 		byte[] cmd = new byte[]{'7','0'};
@@ -175,10 +175,28 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
 		// TODO Auto-generated method stub
 		
 	}
+
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+            throws Exception {
+        logger.error("", cause);
+        super.exceptionCaught(ctx, cause);
+    }
 	
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		char padding = 0x20;
+		byte[] stationId = Converts.str2Bcd(order.getMerchantId());
+		int casherId = Integer.parseInt(order.getGenerator().split("\\|")[1]);
+		byte[] casherNo = Converts.int2U16(casherId);
+		byte[] magic = new byte[]{0x30,0x30,0x30,0x30};
+		byte[] cmd = new byte[]{'7','1'};
+		byte[] tag = new byte[]{'0','0'};
+		
+		byte[] tmp = Utils.concatTwoByteArray(stationId,casherNo);
+		byte[] tmp1 = Utils.concatTwoByteArray(tmp, magic);
+		byte[] tmp2 = Utils.concatTwoByteArray(tmp1, cmd);
+		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
+		
 		ByteBuf b = Unpooled.buffer(69,201);
 		//交易流水号
 		String orderId = order.getOrderId().substring(order.getOrderId().length()-8);
@@ -188,11 +206,23 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
 		//应收金额
 		b.writeBytes(Converts.long2U32(order.getOriginalAmount().multiply(new BigDecimal(100)).longValue()));
 		//实付金额
-		b.writeBytes(Converts.long2U32(order.getPaymentAmount().multiply(new BigDecimal(100)).longValue()));
+        if (order.getPaymentAmount() != null) {
+            b.writeBytes(Converts.long2U32(order.getPaymentAmount().multiply(new BigDecimal(100)).longValue()));
+        } else {
+            b.writeBytes(Converts.long2U32(0));
+        }
 		//优惠券优惠金额
-		b.writeBytes(Converts.long2U32(order.getCouponAmount().multiply(new BigDecimal(100)).longValue()));
+        if (order.getCouponAmount() != null) {
+            b.writeBytes(Converts.long2U32(order.getCouponAmount().multiply(new BigDecimal(100)).longValue()));
+        } else {
+            b.writeBytes(Converts.long2U32(0));
+        }
 		//此次消费获得积分
-		b.writeBytes(Converts.long2U32(order.getLoyaltyPoint().longValue()));
+        if (order.getLoyaltyPoint() != null) {
+            b.writeBytes(Converts.long2U32(order.getLoyaltyPoint().longValue()));
+        } else {
+            b.writeBytes(Converts.long2U32(0));
+        }
 		//消费信息总条数
 		b.writeByte(order.getOrderItems().size());
 		//循环填充交易明细
@@ -202,9 +232,9 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
 			b.writeInt(sie.getUnitPrice().multiply(new BigDecimal(100)).intValue());
 			b.writeInt(sie.getAmount().multiply(new BigDecimal(100)).intValue());
 		}
-		
+		byte[] result = Utils.concatTwoByteArray(tmp3, b.array());
 		logger.debug("Send receipt to Trans POS.");
-		ctx.writeAndFlush(b.array());
+		ctx.writeAndFlush(result);
 	}
 	
 }
