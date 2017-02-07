@@ -30,6 +30,7 @@ public class DeviceResponse {
 	@XStreamAsAttribute
 	private String sequenceId;
 	@XStreamAlias("OverallResult")
+    @XStreamAsAttribute
 	private String overallResult;
 	
 	@XStreamAlias("Output")
