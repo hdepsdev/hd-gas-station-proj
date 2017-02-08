@@ -51,7 +51,8 @@ public class TestDB {
         saleItem.setId("testId");
         saleItem.setProductCode("testCode");
         saleItem.setOrderId("testOrder");
-        saleItem.setItemCode("");
+        saleItem.setItemSeq(1);
+        saleItem.setTaxCode("");
         saleItem.setAmount(new BigDecimal(0));
         saleItem.setQuantity(new BigDecimal(0));
         saleItem.setUnitMeasure("");

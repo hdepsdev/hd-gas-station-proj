@@ -46,7 +46,8 @@ public class SaleItemServiceImpl implements SaleItemService {
             si.setUnitMeasure(item.getUnitMeasure());
             si.setUnitPrice(item.getUnitPrice());
             si.setQuantity(item.getQuantity());
-            si.setItemCode(item.getItemId());
+            si.setItemSeq(item.getItemId());
+            si.setTaxCode(item.getTaxCode());
             si.setOrderId(order.getOrderId());
             si.setAmount(item.getAmount());
             addSaleItem(si);

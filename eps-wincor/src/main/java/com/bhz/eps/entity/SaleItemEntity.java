@@ -27,10 +27,14 @@ public class SaleItemEntity implements java.io.Serializable {
 	@Getter
 	@Setter
 	private BigDecimal quantity;
+	
+	@Getter
+	@Setter
+	private int itemSeq;
 
 	@Getter
 	@Setter
-	private String itemCode;
+	private String taxCode;
 
 	@Getter
 	@Setter

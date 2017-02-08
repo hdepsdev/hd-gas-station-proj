@@ -70,7 +70,7 @@ public class CardServiceRequest implements java.io.Serializable{
 		@XStreamAsAttribute
 		@XStreamAlias("ItemID")
 		@Getter @Setter
-		private String itemId;
+		private int itemId;
 		@XStreamAlias("ProductCode")
 		@Getter @Setter
 		private String productCode;
