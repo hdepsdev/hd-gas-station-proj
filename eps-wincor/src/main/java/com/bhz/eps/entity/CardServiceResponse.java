@@ -7,6 +7,7 @@ import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
 import com.thoughtworks.xstream.converters.extended.ToAttributedValueConverter;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -37,11 +38,11 @@ public class CardServiceResponse implements java.io.Serializable {
 	@XStreamAsAttribute
 	@Getter @Setter
 	private String overallResult;
-	
+
+    @XStreamAlias("Terminal")
 	@Getter @Setter
 	private Terminal terminal;
-	
-	@XStreamAlias("Terminal")
+
 	public static class Terminal{
 		@XStreamAlias("TerminalID")
 		@XStreamAsAttribute
@@ -60,22 +61,23 @@ public class CardServiceResponse implements java.io.Serializable {
 		@Getter @Setter
 		private String applicationId;
 	}
-	
+
+    @XStreamAlias("Tender")
 	@Getter @Setter
 	private Tender tender;
-	
-	@XStreamAlias("Tender")
+
 	public static class Tender{
 		@XStreamAlias("LanguageCode")
 		@XStreamAsAttribute
 		@Getter @Setter
 		private String languageCode = "zh";
-		
+
+        @XStreamConverter(value=ToAttributedValueConverter.class,strings={"totalAmount"})
+        @XStreamAlias("TotalAmount")
 		@Getter @Setter
 		private TotalAmount totalAmount;
-		
-		@XStreamConverter(value=ToAttributedValueConverter.class,strings={"totalAmount"})
-		@XStreamAlias("TotalAmount")
+
+        @Data
 		public static class TotalAmount{
 			@XStreamAlias("PaymentAmount")
 			@XStreamAsAttribute
@@ -101,11 +103,11 @@ public class CardServiceResponse implements java.io.Serializable {
 			@Getter @Setter
 			private BigDecimal totalAmount;
 		}
-		
+
+        @XStreamAlias("Authorisation")
 		@Getter @Setter
 		private Authorisation authorisation;
-		
-		@XStreamAlias("Authorisation")
+
 		public static class Authorisation{
 			@XStreamAlias("AcquirerID")
 			@XStreamAsAttribute
@@ -149,11 +151,11 @@ public class CardServiceResponse implements java.io.Serializable {
 			private String receiptNumber;
 		}
 	}
-	
+
+    @XStreamAlias("CardValue")
 	@Getter @Setter
 	private CardValue cardValue;
-	
-	@XStreamAlias("CardValue")
+
 	public static class CardValue{
 		@Getter @Setter
 		private Track2 track2;

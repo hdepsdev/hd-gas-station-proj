@@ -154,6 +154,8 @@ public class CardServiceRequestProcessor extends BizProcessor {
                                 Authorisation authorisation = new Authorisation();
                                 authorisation.setAcquirerid("0010");
                                 tender.setAuthorisation(authorisation);
+
+                                csr.setTender(tender);
                                 //CardServiceResponse序列化为xml，并发送
                                 String csrxml = xstream.toXML(csr);
                                 logger.debug(csrxml);
