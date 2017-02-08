@@ -44,7 +44,7 @@
     </select>
 
     <select id="getOrderWithItemsById" resultMap="orderWithSaleItemsResult">
-        select * from eps_orders as o, saleitem s ,item i where o.order_id=#{orderId} and s.order_id=o.order_id and s.`product_code`=i.`code`
+        select * from eps_orders as o, eps_saleitems s ,eps_item i where o.order_id=#{orderId} and s.order_id=o.order_id and s.`product_code`=i.`code`
     </select>
 
     <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
