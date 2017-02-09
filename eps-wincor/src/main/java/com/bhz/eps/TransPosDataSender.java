@@ -13,6 +13,7 @@ import com.bhz.eps.codec.TPDUDecoder;
 import com.bhz.eps.codec.TPDUEncoder;
 import com.bhz.eps.entity.Order;
 import com.bhz.eps.entity.SaleItemEntity;
+import com.bhz.eps.pdu.transpos.TPDU;
 import com.bhz.eps.util.Converts;
 import com.bhz.eps.util.Utils;
 
@@ -118,7 +119,7 @@ public class TransPosDataSender {
 	}
 }
 
-class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
+class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{
 	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
 	Order order;
 	
@@ -126,9 +127,9 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
 		this.order = order;
 	}
 	@Override
-	protected void messageReceived(ChannelHandlerContext ctx, Order msg) throws Exception {
-		// TODO Auto-generated method stub
-		
+	protected void messageReceived(ChannelHandlerContext ctx, TPDU msg) throws Exception {
+//		byte[] cmd = msg.getBody().getHeader().getCmd();
+		System.out.println(msg);
 	}
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
@@ -182,7 +183,7 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<Order>{
 	
 }
 
-class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
+class SendReceiptHandler extends SimpleChannelInboundHandler<TPDU>{
 	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
 	Order order;
 	
@@ -190,9 +191,9 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<Order>{
 		this.order = order;
 	}
 	@Override
-	protected void messageReceived(ChannelHandlerContext ctx, Order msg) throws Exception {
+	protected void messageReceived(ChannelHandlerContext ctx, TPDU msg) throws Exception {
 		// TODO Auto-generated method stub
-		
+		System.out.println(msg);
 	}
 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)

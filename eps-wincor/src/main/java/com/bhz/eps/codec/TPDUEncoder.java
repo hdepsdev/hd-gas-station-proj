@@ -1,5 +1,7 @@
 package com.bhz.eps.codec;
 
+import java.util.Arrays;
+
 import com.bhz.eps.util.TransPosMessageEncryption;
 import com.bhz.eps.util.Utils;
 
@@ -27,6 +29,8 @@ public class TPDUEncoder extends MessageToByteEncoder<Object> {
 		
 		byte[] tpduHeader = Utils.genTPDUHeader(bizDataArr.length);
 		byte[] responseMsg = Utils.concatTwoByteArray(tpduHeader, bizDataArr);
+		
+		System.out.println(Arrays.toString(responseMsg));
 		
     	out.writeBytes(responseMsg);
     }
