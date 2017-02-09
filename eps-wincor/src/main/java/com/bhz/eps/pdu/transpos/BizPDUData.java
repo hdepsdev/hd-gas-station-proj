@@ -21,6 +21,6 @@ public class BizPDUData implements Serializable{
     
     @Override
     public String toString(){
-        return content.toString() + "\n";
+        return new String(content) + "\n";
     }
 }
