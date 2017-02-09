@@ -140,6 +140,7 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		/*
 		char padding = 0x20;
 		String strAppid = Utils.systemConfiguration.getProperty("weixin.appid");
 		String strMchid = Utils.systemConfiguration.getProperty("weixin.mchid");
@@ -175,6 +176,32 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{
 		byte[] tmp2 = Utils.concatTwoByteArray(tmp1, cmd);
 		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
 		byte[] result = Utils.concatTwoByteArray(tmp3, content);
+		
+		logger.debug("Send order to Trans POS.");
+        logger.debug(Arrays.toString(result));
+		ctx.writeAndFlush(result);
+		*/
+		String payUrl = Utils.systemConfiguration.getProperty("weixin.pay.url");
+		String orderId = order.getOrderId();
+		String overall = payUrl + orderId;
+		ByteBuf length = Unpooled.buffer(4);
+		byte[] content = overall.getBytes("utf-8");
+		length.writeInt(content.length);
+		byte[] contentLength = length.array();
+		
+		byte[] stationId = Converts.str2Bcd(order.getMerchantId());
+		int casherId = Integer.parseInt(order.getGenerator().split("\\|")[1]);
+		byte[] casherNo = Converts.int2U16(casherId);
+		byte[] magic = new byte[]{0x30,0x30,0x30,0x30};
+		byte[] cmd = new byte[]{'7','0'};
+		byte[] tag = new byte[]{'0','0'};
+		
+		byte[] tmp = Utils.concatTwoByteArray(stationId,casherNo);
+		byte[] tmp1 = Utils.concatTwoByteArray(tmp, magic);
+		byte[] tmp2 = Utils.concatTwoByteArray(tmp1, cmd);
+		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
+		byte[] tmp4 = Utils.concatTwoByteArray(tmp3, contentLength);
+		byte[] result = Utils.concatTwoByteArray(tmp4, content);
 		
 		logger.debug("Send order to Trans POS.");
         logger.debug(Arrays.toString(result));
