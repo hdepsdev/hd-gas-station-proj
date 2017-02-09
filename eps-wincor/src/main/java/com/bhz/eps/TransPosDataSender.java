@@ -2,7 +2,10 @@ package com.bhz.eps;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
+import com.bhz.eps.util.WeiXinUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -141,10 +144,18 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{
 		String strAppid = Utils.systemConfiguration.getProperty("weixin.appid");
 		String strMchid = Utils.systemConfiguration.getProperty("weixin.mchid");
 		String strNonce = Utils.systemConfiguration.getProperty("weixin.nonce");
-		String strSign = Utils.systemConfiguration.getProperty("weixin.sign");
+
 		String strTime = Long.toString(order.getOrderTime());
 		String strProductId = order.getOrderId();
-		
+
+        SortedMap<Object,Object> parameters = new TreeMap<Object,Object>();
+        parameters.put("appid", strAppid);
+        parameters.put("mch_id", strMchid);
+        parameters.put("time_stamp", strTime);
+        parameters.put("nonce_str", strNonce);
+        parameters.put("product_id", strProductId);
+        String strSign = WeiXinUtil.createSign("UTF-8", parameters);
+
 		StringBuilder sb = new StringBuilder();
 		sb.append(Utils.rightPad(strAppid, 32, padding)).append(Utils.rightPad(strMchid, 32, padding))
 			.append(Utils.rightPad(strTime, 10, padding)).append(Utils.rightPad(strNonce, 32, padding))
