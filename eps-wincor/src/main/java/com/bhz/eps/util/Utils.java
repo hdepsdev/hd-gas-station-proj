@@ -3,6 +3,7 @@ package com.bhz.eps.util;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Properties;
@@ -129,5 +130,25 @@ public class Utils {
 		Arrays.fill(array, text.length(), length, c);
 		System.arraycopy(text.toCharArray(), 0, array, 0, text.length());
 		return new String(array);
+	}
+	
+	public static String convertGB(String text,int length){
+		String s = rightPad(text, length, (char)0x20);
+		byte[] b;
+		try {
+			b = s.getBytes("gb2312");
+			byte[] re = new byte[length];
+			System.arraycopy(b, 0, re, 0, re.length);
+			return new String(re,"gb2312");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		return "";
+	}
+	
+	public static void main(String[] args) throws Exception{
+		byte[] s = Utils.convertGB("中国",32).getBytes(Charset.forName("GB2312"));
+		System.out.println(s.length);
+		System.out.println(new String(s,"gb2312"));
 	}
 }

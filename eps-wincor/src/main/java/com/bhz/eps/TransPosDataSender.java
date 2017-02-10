@@ -1,6 +1,7 @@
 package com.bhz.eps;
 
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -266,7 +267,7 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<TPDU>{
         }
 		//此次消费获得积分
         if (order.getLoyaltyPoint() != null) {
-            b.writeBytes(Converts.long2U32(order.getLoyaltyPoint().longValue()));
+            b.writeBytes(Converts.long2U32(order.getLoyaltyPoint().multiply(new BigDecimal(100)).longValue()));
         } else {
             b.writeBytes(Converts.long2U32(0));
         }
@@ -274,7 +275,7 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<TPDU>{
 		b.writeByte(order.getOrderItems().size());
 		//循环填充交易明细
 		for(SaleItemEntity sie:order.getOrderItems()){
-			b.writeBytes(Utils.rightPad(sie.getItemName(), 32, padding).getBytes());
+			b.writeBytes(Utils.convertGB(sie.getItemName(),32).getBytes(Charset.forName("GB2312")));
 			b.writeInt(sie.getQuantity().multiply(new BigDecimal(100)).intValue());
 			b.writeInt(sie.getUnitPrice().multiply(new BigDecimal(100)).intValue());
 			b.writeInt(sie.getAmount().multiply(new BigDecimal(100)).intValue());
