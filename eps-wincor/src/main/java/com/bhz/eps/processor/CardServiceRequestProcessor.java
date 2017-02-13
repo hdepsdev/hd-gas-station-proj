@@ -2,6 +2,7 @@ package com.bhz.eps.processor;
 
 import io.netty.channel.Channel;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -80,6 +81,16 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		//ordersrv.addOrder(order);
 		//存储saleitems
 		SaleItemService saleItemsrv = EPSServer.appctx.getBean("saleItemService", SaleItemService.class);
+        //设置默认值
+        if (order.getPaymentAmount() == null) {
+            order.setPaymentAmount(new BigDecimal(0.00));
+        }
+        if (order.getCouponAmount() == null) {
+            order.setCouponAmount(new BigDecimal(0.00));
+        }
+        if (order.getLoyaltyPoint() == null) {
+            order.setLoyaltyPoint(new BigDecimal(0));
+        }
         saleItemsrv.saveSaleItems(order, csr.getSaleItemList());
 		
 		//请求设备显示支付等待
