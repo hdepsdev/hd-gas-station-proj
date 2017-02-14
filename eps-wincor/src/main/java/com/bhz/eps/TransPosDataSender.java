@@ -31,6 +31,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.AttributeKey;
 
 public class TransPosDataSender {
 	private static final Logger logger = LogManager.getLogger(TransPosDataSender.class);
@@ -203,7 +204,8 @@ class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{
 		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
 		byte[] tmp4 = Utils.concatTwoByteArray(tmp3, contentLength);
 		byte[] result = Utils.concatTwoByteArray(tmp4, content);
-		
+		//保存订单信息到Channel属性中，以便在连接异常时回滚此笔订单。
+		ctx.channel().attr(AttributeKey.valueOf("orderId")).set(orderId);
 		logger.debug("Send order to Trans POS.");
         logger.debug(Arrays.toString(result));
 		ctx.writeAndFlush(result);

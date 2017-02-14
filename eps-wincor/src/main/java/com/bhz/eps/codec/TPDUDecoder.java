@@ -2,15 +2,22 @@ package com.bhz.eps.codec;
 
 import java.util.List;
 
-import com.bhz.eps.pdu.transpos.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import com.bhz.eps.EPSServer;
+import com.bhz.eps.pdu.transpos.*;
+import com.bhz.eps.service.OrderService;
+import com.bhz.eps.service.SaleItemService;
 import com.bhz.eps.util.Converts;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.AttributeKey;
 
 public class TPDUDecoder extends ByteToMessageDecoder {
+	private static final Logger logger = LogManager.getLogger(TPDUDecoder.class);
 
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -55,8 +62,23 @@ public class TPDUDecoder extends ByteToMessageDecoder {
 	
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		System.out.print("The Client is disconnected! The Channel related to this client will be closed! --> ");
+		logger.info("The Client is disconnected! The Channel related to this client will be closed! --> ");
 		ctx.close();
-		System.out.println("Channel CLOSE OK.");
+		logger.info("Channel CLOSE OK. --from " + this.getClass());
+		try {
+            Object o = ctx.channel().attr(AttributeKey.valueOf("orderId")).get();
+            logger.debug("OrderID " + o.toString());
+            if (o != null) {
+                logger.debug("delete data by orderId: " + o.toString());
+                SaleItemService saleItemSrv = EPSServer.appctx.getBean("saleItemService", SaleItemService.class);
+                int i = saleItemSrv.deleteSaleItemByOrderId(o.toString());
+                logger.debug("delete eps_saleitems " + i + " rows");
+                OrderService orderSrv = EPSServer.appctx.getBean("orderService", OrderService.class);
+                i = orderSrv.deleteByPrimaryKey(o.toString());
+                logger.debug("delete eps_orders " + i + " rows");
+            }
+        } catch (Exception e) {
+            logger.error("", e);
+        }
 	}
 }
