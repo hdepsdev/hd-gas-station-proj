@@ -1,22 +1,16 @@
 package com.bhz.eps.codec;
 
-import java.util.List;
-
-import com.bhz.eps.EPSServer;
-import com.bhz.eps.service.OrderService;
-import com.bhz.eps.service.SaleItemService;
-import io.netty.util.AttributeKey;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.bhz.eps.entity.CardServiceRequest;
 import com.bhz.eps.entity.DeviceResponse;
 import com.bhz.eps.pdu.WincorPosPDU;
 import com.thoughtworks.xstream.XStream;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.List;
 
 public class WincorPosMsgDecoder extends ByteToMessageDecoder {
 
@@ -66,6 +60,27 @@ public class WincorPosMsgDecoder extends ByteToMessageDecoder {
 		logger.info("The Client is disconnected! The Channel related to this client will be closed! --> ");
 		ctx.close();
 		logger.info("Channel CLOSE OK. --from " + this.getClass());
-        
+        //test code
+        /*
+        try {
+            Object o = ctx.channel().attr(AttributeKey.valueOf("orderId")).get();
+            logger.debug("orderId: " + o);
+            if (o != null) {
+                logger.debug("update by orderId: " + o.toString());
+                OrderService orderSrv = EPSServer.appctx.getBean("orderService", OrderService.class);
+                Order order = orderSrv.getOrderbyId(o.toString());
+                int status = order.getStatus();
+                if (status == Order.STATUS_WAIT) {
+                    order.setStatus(Order.STATUS_ERROR);
+                    int i = orderSrv.updateOrder(order);
+                    logger.debug("update eps_orders " + i + " rows");
+                } else {
+                    logger.debug("eps_orders status: " + status + ", cancel update");
+                }
+            }
+        } catch (Exception e) {
+            logger.error("", e);
+        }
+        */
 	}
 }

@@ -7,4 +7,5 @@ public interface OrderService {
     public int deleteByPrimaryKey(String orderId);
 	public Order getOrderbyId(String orderId);
 	public Order getOrderWithSaleItemsById(String orderId);
+    public int updateOrder(Order order);
 }

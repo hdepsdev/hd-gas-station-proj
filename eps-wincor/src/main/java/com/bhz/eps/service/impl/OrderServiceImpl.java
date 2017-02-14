@@ -32,4 +32,8 @@ public class OrderServiceImpl implements OrderService{
 		return orderMapper.getOrderWithItemsById(orderId);
 	}
 
+    @Override
+    public int updateOrder(Order order) {
+        return orderMapper.updateByPrimaryKey(order);
+    }
 }

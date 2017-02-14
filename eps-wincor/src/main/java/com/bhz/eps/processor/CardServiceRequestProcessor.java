@@ -56,10 +56,8 @@ public class CardServiceRequestProcessor extends BizProcessor {
 			
 		}
 		
-		
 		//生成订单,存储数据库
 		//存储订单信息order
-		Order order = new Order();
 		Date date = new Date();
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		try {
@@ -70,45 +68,67 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		sdf = new SimpleDateFormat("yyyyMMdd");
 		String merchantId = Utils.systemConfiguration.getProperty("eps.server.merchant.id");
 		String orderId = sdf.format(date) + merchantId +csr.getRequestId();
-        this.getChannel().attr(AttributeKey.valueOf("orderId")).set(orderId);
+        //test code
+        //this.getChannel().attr(AttributeKey.valueOf("orderId")).set(orderId);
         OrderService ordersrv = EPSServer.appctx.getBean("orderService", OrderService.class);
-        Order exist = ordersrv.getOrderbyId(orderId);
-        if (exist != null) {//如果订单数据已存在则直接结束
-            logger.debug("orderId:" + orderId + " has exists.");
-            return;
+        Order order = ordersrv.getOrderbyId(orderId);
+        if (order != null) {
+            //如果订单数据已存在，判断状态
+            //如果状态为1或2，表示交易成功或已锁定，直接退出
+            //如果为99，表示该订单曾出现异常，置状态为0(待支付)，重新发送二维码并启动轮询
+            //如果为0，标示待支付，直接退出，因为插入数据时轮询已启动
+            logger.debug("orderId: " + orderId + " has exists. status: " + order.getStatus());
+            if (order.getStatus() == Order.STATUS_ERROR) {
+                order.setStatus(Order.STATUS_WAIT);
+                ordersrv.updateOrder(order);
+                sendMsgAndSchedule(order, csr);
+            }
+        } else {
+            //订单不存在，插入数据
+            logger.debug("insert orderId:" + orderId);
+            order = new Order();
+            order.setOrderId(orderId);
+            order.setMerchantId(merchantId);
+            order.setMerchantName(Utils.systemConfiguration.getProperty("eps.server.merchant.name"));
+            order.setGenerator(csr.getApplicationSender() + "|" + csr.getWorkstationId());
+            order.setOrderTime(date.getTime()/1000);//将毫秒转为秒
+            order.setShiftNumber(csr.getPosData().getShiftNumber());
+            order.setClerkId(csr.getPosData().getClerkID());
+            order.setOriginalAmount(csr.getTotalAmount());
+            //OrderService ordersrv = EPSServer.appctx.getBean("orderService", OrderService.class);
+            //ordersrv.addOrder(order);
+            //存储saleitems
+            SaleItemService saleItemsrv = EPSServer.appctx.getBean("saleItemService", SaleItemService.class);
+            //设置默认值
+            if (order.getPaymentAmount() == null) {
+                order.setPaymentAmount(new BigDecimal(0.00));
+            }
+            if (order.getCouponAmount() == null) {
+                order.setCouponAmount(new BigDecimal(0.00));
+            }
+            if (order.getLoyaltyPoint() == null) {
+                order.setLoyaltyPoint(new BigDecimal(0));
+            }
+            saleItemsrv.saveSaleItems(order, csr.getSaleItemList());
+            sendMsgAndSchedule(order, csr);
         }
-		order.setOrderId(orderId);
-		order.setMerchantId(merchantId);
-		order.setMerchantName(Utils.systemConfiguration.getProperty("eps.server.merchant.name"));
-		order.setGenerator(csr.getApplicationSender() + "|" + csr.getWorkstationId());
-		order.setOrderTime(date.getTime()/1000);//将毫秒转为秒
-		order.setShiftNumber(csr.getPosData().getShiftNumber());
-		order.setClerkId(csr.getPosData().getClerkID());
-		order.setOriginalAmount(csr.getTotalAmount());
-		//OrderService ordersrv = EPSServer.appctx.getBean("orderService", OrderService.class);
-		//ordersrv.addOrder(order);
-		//存储saleitems
-		SaleItemService saleItemsrv = EPSServer.appctx.getBean("saleItemService", SaleItemService.class);
-        //设置默认值
-        if (order.getPaymentAmount() == null) {
-            order.setPaymentAmount(new BigDecimal(0.00));
-        }
-        if (order.getCouponAmount() == null) {
-            order.setCouponAmount(new BigDecimal(0.00));
-        }
-        if (order.getLoyaltyPoint() == null) {
-            order.setLoyaltyPoint(new BigDecimal(0));
-        }
-        saleItemsrv.saveSaleItems(order, csr.getSaleItemList());
-		
-		//请求设备显示支付等待
-		DeviceService ds = DeviceService.getInstance(Utils.systemConfiguration.getProperty("eps.bpos.ds.ip"), 
-				Integer.parseInt(Utils.systemConfiguration.getProperty("eps.bpos.ds.port")));
+    }
+
+    /**
+     * 发送消息并启动检测交易状态的定时任务
+     * @param order
+     * @param csr
+     */
+    private void sendMsgAndSchedule(Order order, CardServiceRequest csr) {
+        //请求设备显示支付等待
+        DeviceService ds = DeviceService.getInstance(Utils.systemConfiguration.getProperty("eps.bpos.ds.ip"),
+                Integer.parseInt(Utils.systemConfiguration.getProperty("eps.bpos.ds.port")));
 
         new Thread(){
             @Override
             public void run() {
                 try {
+                    logger.debug("send message");
                     ds.askBPosDisplay("正在支付，请稍后...", order);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -117,8 +137,9 @@ public class CardServiceRequestProcessor extends BizProcessor {
         }.start();
 
         //轮询查询交易状态，当交易完成时停止轮询并将数据传出
+        logger.debug("create schedule");
         ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
-        ScheduledFuture f = service.scheduleWithFixedDelay(new CheckStatus(service, orderId, channel, csr), 0, 1, TimeUnit.SECONDS);
+        ScheduledFuture f = service.scheduleWithFixedDelay(new CheckStatus(service, order.getOrderId(), channel, csr), 0, 1, TimeUnit.SECONDS);
     }
 
     class CheckStatus implements Runnable {
@@ -128,9 +149,9 @@ public class CardServiceRequestProcessor extends BizProcessor {
         private CardServiceRequest cardServiceRequest;
         private OrderService orderService = EPSServer.appctx.getBean("orderService", OrderService.class);
         private final String weiXinPay = "0010";//TODO 微信支付方式，真实值未知
-        private Order order_old;
         
         CheckStatus(ScheduledExecutorService service, String orderId, Channel channel, CardServiceRequest cardservicerequest) {
+            logger.debug("create CheckStatus");
             this.service = service;
             this.orderId = orderId;
             this.channel = channel;
@@ -141,7 +162,10 @@ public class CardServiceRequestProcessor extends BizProcessor {
         public void run() {
             try {
                 Order order = orderService.getOrderWithSaleItemsById(orderId);
-                if (order == null) {//订单已取消
+                //test log
+                //logger.debug("start CheckStatus " + this.hashCode());
+                //logger.debug("orderId: " + orderId + ", status: " + order.getStatus());
+                if (Order.STATUS_ERROR == order.getStatus()) {//订单异常
                     ExecutorService cardResponseService = Executors.newFixedThreadPool(1);
                     cardResponseService.execute(new Runnable() {
 
@@ -161,10 +185,10 @@ public class CardServiceRequestProcessor extends BizProcessor {
                                 Tender tender = new Tender();
 
                                 TotalAmount totalAmount = new TotalAmount();
-                                totalAmount.setTotalAmount(order_old.getPaymentAmount());
-                                totalAmount.setPaymentAmount(order_old.getPaymentAmount());
-                                totalAmount.setRebateAmount(order_old.getCouponAmount());
-                                totalAmount.setOriginalAmount(order_old.getOriginalAmount());
+                                totalAmount.setTotalAmount(order.getPaymentAmount());
+                                totalAmount.setPaymentAmount(order.getPaymentAmount());
+                                totalAmount.setRebateAmount(order.getCouponAmount());
+                                totalAmount.setOriginalAmount(order.getOriginalAmount());
                                 tender.setTotalAmount(totalAmount);
 
                                 Authorisation authorisation = new Authorisation();
@@ -186,8 +210,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
                     cardResponseService.shutdown();
                     service.shutdownNow();
                     return;
-                }
-                if (Order.STATUS_SUCCESS == order.getStatus()) {
+                } else if (Order.STATUS_SUCCESS == order.getStatus()) {//交易完成
                     TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
                             Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
 
@@ -253,7 +276,6 @@ public class CardServiceRequestProcessor extends BizProcessor {
                     printReceiptService.shutdown();
                     service.shutdownNow();
                 }
-                order_old = order;
             } catch (Exception e) {
                 e.printStackTrace();
                 service.shutdownNow();

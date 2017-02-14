@@ -2,6 +2,7 @@ package com.bhz.eps.codec;
 
 import java.util.List;
 
+import com.bhz.eps.entity.Order;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -67,15 +68,19 @@ public class TPDUDecoder extends ByteToMessageDecoder {
 		logger.info("Channel CLOSE OK. --from " + this.getClass());
 		try {
             Object o = ctx.channel().attr(AttributeKey.valueOf("orderId")).get();
-            logger.debug("OrderID " + o.toString());
+            logger.debug("orderId: " + o);
             if (o != null) {
-                logger.debug("delete data by orderId: " + o.toString());
-                SaleItemService saleItemSrv = EPSServer.appctx.getBean("saleItemService", SaleItemService.class);
-                int i = saleItemSrv.deleteSaleItemByOrderId(o.toString());
-                logger.debug("delete eps_saleitems " + i + " rows");
+                logger.debug("update by orderId: " + o.toString());
                 OrderService orderSrv = EPSServer.appctx.getBean("orderService", OrderService.class);
-                i = orderSrv.deleteByPrimaryKey(o.toString());
-                logger.debug("delete eps_orders " + i + " rows");
+                Order order = orderSrv.getOrderbyId(o.toString());
+                int status = order.getStatus();
+                if (status == Order.STATUS_WAIT) {
+                    order.setStatus(Order.STATUS_ERROR);
+                    int i = orderSrv.updateOrder(order);
+                    logger.debug("update eps_orders " + i + " rows");
+                } else {
+                    logger.debug("eps_orders status: " + status + ", cancel update");
+                }
             }
         } catch (Exception e) {
             logger.error("", e);

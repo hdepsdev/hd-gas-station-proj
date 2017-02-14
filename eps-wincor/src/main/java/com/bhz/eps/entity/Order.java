@@ -9,7 +9,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class Order implements java.io.Serializable{
+    public static final int STATUS_WAIT = 0;
     public static final int STATUS_SUCCESS = 1;
+    public static final int STATUS_LOCK = 2;
+    public static final int STATUS_ERROR = 99;
 
 	private static final long serialVersionUID = 1147436830836898182L;
 	
@@ -47,7 +50,7 @@ public class Order implements java.io.Serializable{
 	private BigDecimal loyaltyPoint;
 	
 	@Getter @Setter
-	private int status;//1为支付完成
+	private int status;//0为待支付，1为支付完成，2为已锁定，99为支付异常
 	
 	@Getter @Setter
 	private Set<SaleItemEntity> orderItems = new HashSet<SaleItemEntity>();
