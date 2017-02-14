@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.*;
 
+import io.netty.util.AttributeKey;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -69,6 +70,13 @@ public class CardServiceRequestProcessor extends BizProcessor {
 		sdf = new SimpleDateFormat("yyyyMMdd");
 		String merchantId = Utils.systemConfiguration.getProperty("eps.server.merchant.id");
 		String orderId = sdf.format(date) + merchantId +csr.getRequestId();
+        this.getChannel().attr(AttributeKey.valueOf("orderId")).set(orderId);
+        OrderService ordersrv = EPSServer.appctx.getBean("orderService", OrderService.class);
+        Order exist = ordersrv.getOrderbyId(orderId);
+        if (exist != null) {//如果订单数据已存在则直接结束
+            logger.debug("orderId:" + orderId + " has exists.");
+            return;
+        }
 		order.setOrderId(orderId);
 		order.setMerchantId(merchantId);
 		order.setMerchantName(Utils.systemConfiguration.getProperty("eps.server.merchant.name"));
@@ -119,6 +127,8 @@ public class CardServiceRequestProcessor extends BizProcessor {
         private Channel channel;
         private CardServiceRequest cardServiceRequest;
         private OrderService orderService = EPSServer.appctx.getBean("orderService", OrderService.class);
+        private final String weiXinPay = "0010";//TODO 微信支付方式，真实值未知
+        private Order order_old;
         
         CheckStatus(ScheduledExecutorService service, String orderId, Channel channel, CardServiceRequest cardservicerequest) {
             this.service = service;
@@ -131,6 +141,52 @@ public class CardServiceRequestProcessor extends BizProcessor {
         public void run() {
             try {
                 Order order = orderService.getOrderWithSaleItemsById(orderId);
+                if (order == null) {//订单已取消
+                    ExecutorService cardResponseService = Executors.newFixedThreadPool(1);
+                    cardResponseService.execute(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            try {
+                                // TODO Auto-generated method stub
+                                //获取订单相关信息
+                                CardServiceResponse csr = new CardServiceResponse();
+                                csr.setRequestType(cardServiceRequest.getRequestType());
+                                csr.setApplicationSender(cardServiceRequest.getApplicationSender());
+                                csr.setWorkstationId(cardServiceRequest.getWorkstationId());
+                                csr.setPopId(cardServiceRequest.getPopId());
+                                csr.setRequestId(cardServiceRequest.getRequestId());
+                                csr.setOverallResult("Aborted");
+
+                                Tender tender = new Tender();
+
+                                TotalAmount totalAmount = new TotalAmount();
+                                totalAmount.setTotalAmount(order_old.getPaymentAmount());
+                                totalAmount.setPaymentAmount(order_old.getPaymentAmount());
+                                totalAmount.setRebateAmount(order_old.getCouponAmount());
+                                totalAmount.setOriginalAmount(order_old.getOriginalAmount());
+                                tender.setTotalAmount(totalAmount);
+
+                                Authorisation authorisation = new Authorisation();
+                                authorisation.setAcquirerid(weiXinPay);
+                                tender.setAuthorisation(authorisation);
+
+                                csr.setTender(tender);
+                                //CardServiceResponse序列化为xml，并发送
+                                String csrxml = xstream.toXML(csr);
+                                logger.debug(csrxml);
+                                channel.write(csrxml);
+                                channel.flush();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                    });
+                    cardResponseService.shutdown();
+                    service.shutdownNow();
+                    return;
+                }
                 if (Order.STATUS_SUCCESS == order.getStatus()) {
                     TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
                             Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
@@ -163,7 +219,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
                                 tender.setTotalAmount(totalAmount);
 
                                 Authorisation authorisation = new Authorisation();
-                                authorisation.setAcquirerid("0010");
+                                authorisation.setAcquirerid(weiXinPay);
                                 tender.setAuthorisation(authorisation);
 
                                 csr.setTender(tender);
@@ -197,8 +253,10 @@ public class CardServiceRequestProcessor extends BizProcessor {
                     printReceiptService.shutdown();
                     service.shutdownNow();
                 }
+                order_old = order;
             } catch (Exception e) {
                 e.printStackTrace();
+                service.shutdownNow();
             }
         }
     }

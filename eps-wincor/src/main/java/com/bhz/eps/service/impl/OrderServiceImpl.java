@@ -17,6 +17,11 @@ public class OrderServiceImpl implements OrderService{
         orderMapper.insert(order);
 	}
 
+    @Override
+    public int deleteByPrimaryKey(String orderId) {
+        return orderMapper.deleteByPrimaryKey(orderId);
+    }
+
 	@Override
 	public Order getOrderbyId(String orderId) {
 		return orderMapper.selectByPrimaryKey(orderId);

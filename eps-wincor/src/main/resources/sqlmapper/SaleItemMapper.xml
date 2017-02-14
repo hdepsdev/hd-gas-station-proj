@@ -42,6 +42,10 @@
         delete from eps_saleitems
         where id = #{id,jdbcType=VARCHAR}
     </delete>
+    <delete id="deleteByOrderId" parameterType="java.lang.String">
+        delete from eps_saleitems
+        where order_id = #{orderId,jdbcType=VARCHAR}
+    </delete>
     <insert id="insert" parameterType="com.bhz.eps.entity.SaleItemEntity">
         insert into eps_saleitems (id, product_code, unit_measure,
         unit_price, quantity, item_seq,

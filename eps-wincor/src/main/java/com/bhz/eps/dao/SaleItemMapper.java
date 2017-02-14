@@ -8,6 +8,8 @@ import java.util.Map;
 public interface SaleItemMapper {
     int deleteByPrimaryKey(String id);
 
+    int deleteByOrderId(String orderId);
+
     int insert(SaleItemEntity record);
 
     int insertSelective(SaleItemEntity record);

@@ -29,6 +29,11 @@ public class SaleItemServiceImpl implements SaleItemService {
         saleItemMapper.insert(saleItem);
 	}
 
+    @Override
+    public int deleteSaleItemByOrderId(String orderId) {
+        return saleItemMapper.deleteByOrderId(orderId);
+    }
+
 	@Override
 	public List<SaleItemEntity> getSaleItemsbyOrderId(String orderId) {
         Map param = new HashMap<>();

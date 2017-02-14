@@ -8,6 +8,7 @@ import com.bhz.eps.entity.SaleItemEntity;
 
 public interface SaleItemService {
 	public void addSaleItem(SaleItemEntity saleItem);
+    public int deleteSaleItemByOrderId(String orderId);
 	public List<SaleItemEntity> getSaleItemsbyOrderId(String orderId);
     public void saveSaleItems(Order order, List<CardServiceRequest.SaleItem> saleItemList);
 }
