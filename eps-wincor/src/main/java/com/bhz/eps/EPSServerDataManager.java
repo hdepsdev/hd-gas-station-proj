@@ -72,7 +72,7 @@ public class EPSServerDataManager {
 		}
 	}
 	
-	private void submitTransData(List<PaymentReq> payload) throws Exception{
+	private void submitTransData(final List<PaymentReq> payload) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{

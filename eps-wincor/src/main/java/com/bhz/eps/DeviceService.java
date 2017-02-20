@@ -74,35 +74,41 @@ public class DeviceService {
 		}
 	}
 	
-	public void askBPosDisplay(String message, Order order) throws Exception{
-		Bootstrap boot = new Bootstrap();
-		EventLoopGroup worker = new NioEventLoopGroup();
-		try{
-			boot.group(worker).option(ChannelOption.TCP_NODELAY, true)
-				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Integer.parseInt(Utils.systemConfiguration.getProperty("eps.conn.bpos.timeout")))
-				.channel(NioSocketChannel.class)
-				.handler(new ChannelInitializer<SocketChannel>(){	
-					@Override
-					protected void initChannel(SocketChannel ch) throws Exception {
-						ch.pipeline().addLast(new WincorPosMsgEncoder());
-						ch.pipeline().addLast(new WincorPosMsgDecoder());
-						ch.pipeline().addLast(new DeviceServiceMessageHandler(message, order));
-					}
-					
-				});
-			ChannelFuture cf = boot.connect(this.bposIP, this.bposPort).sync();
-			cf.addListener(new ChannelFutureListener() {
-				
-				@Override
-				public void operationComplete(ChannelFuture future) throws Exception {
-					logger.debug("Established connection to " + bposIP + " on port " + bposPort);
-				}
-				
-			});
-			cf.channel().closeFuture().sync();
-		}finally{
-			worker.shutdownGracefully();
-		}
+	public void askBPosDisplay(final String message, final Order order) throws Exception{
+        if ("0".equals(Utils.systemConfiguration.getProperty("eps.bpos.ds.send"))) {
+            TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
+                    Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).
+                    sendOrderToTransPos(order);
+        } else {
+            Bootstrap boot = new Bootstrap();
+            EventLoopGroup worker = new NioEventLoopGroup();
+            try {
+                boot.group(worker).option(ChannelOption.TCP_NODELAY, true)
+                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Integer.parseInt(Utils.systemConfiguration.getProperty("eps.conn.bpos.timeout")))
+                        .channel(NioSocketChannel.class)
+                        .handler(new ChannelInitializer<SocketChannel>() {
+                            @Override
+                            protected void initChannel(SocketChannel ch) throws Exception {
+                                ch.pipeline().addLast(new WincorPosMsgEncoder());
+                                ch.pipeline().addLast(new WincorPosMsgDecoder());
+                                ch.pipeline().addLast(new DeviceServiceMessageHandler(message, order));
+                            }
+
+                        });
+                ChannelFuture cf = boot.connect(this.bposIP, this.bposPort).sync();
+                cf.addListener(new ChannelFutureListener() {
+
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        logger.debug("Established connection to " + bposIP + " on port " + bposPort);
+                    }
+
+                });
+                cf.channel().closeFuture().sync();
+            } finally {
+                worker.shutdownGracefully();
+            }
+        }
 	}
 }
 

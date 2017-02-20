@@ -119,9 +119,9 @@ public class CardServiceRequestProcessor extends BizProcessor {
      * @param order
      * @param csr
      */
-    private void sendMsgAndSchedule(Order order, CardServiceRequest csr) {
+    private void sendMsgAndSchedule(final Order order, CardServiceRequest csr) {
         //请求设备显示支付等待
-        DeviceService ds = DeviceService.getInstance(Utils.systemConfiguration.getProperty("eps.bpos.ds.ip"),
+        final DeviceService ds = DeviceService.getInstance(Utils.systemConfiguration.getProperty("eps.bpos.ds.ip"),
                 Integer.parseInt(Utils.systemConfiguration.getProperty("eps.bpos.ds.port")));
 
         new Thread(){
@@ -148,7 +148,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
         private Channel channel;
         private CardServiceRequest cardServiceRequest;
         private OrderService orderService = EPSServer.appctx.getBean("orderService", OrderService.class);
-        private final String weiXinPay = "0010";//TODO 微信支付方式，真实值未知
+        private final String payCode = Utils.systemConfiguration.getProperty("eps.server.pay.code");//支付方式
         
         CheckStatus(ScheduledExecutorService service, String orderId, Channel channel, CardServiceRequest cardservicerequest) {
             logger.debug("create CheckStatus");
@@ -161,7 +161,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
         @Override
         public void run() {
             try {
-                Order order = orderService.getOrderWithSaleItemsById(orderId);
+                final Order order = orderService.getOrderWithSaleItemsById(orderId);
                 //test log
                 //logger.debug("start CheckStatus " + this.hashCode());
                 //logger.debug("orderId: " + orderId + ", status: " + order.getStatus());
@@ -192,7 +192,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
                                 tender.setTotalAmount(totalAmount);
 
                                 Authorisation authorisation = new Authorisation();
-                                authorisation.setAcquirerid(weiXinPay);
+                                authorisation.setAcquirerid(payCode);
                                 tender.setAuthorisation(authorisation);
 
                                 csr.setTender(tender);
@@ -211,7 +211,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
                     service.shutdownNow();
                     return;
                 } else if (Order.STATUS_SUCCESS == order.getStatus()) {//交易完成
-                    TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
+                    final TransPosDataSender sender = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
                             Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
 
                     ExecutorService cardResponseService = Executors.newFixedThreadPool(1);
@@ -242,7 +242,7 @@ public class CardServiceRequestProcessor extends BizProcessor {
                                 tender.setTotalAmount(totalAmount);
 
                                 Authorisation authorisation = new Authorisation();
-                                authorisation.setAcquirerid(weiXinPay);
+                                authorisation.setAcquirerid(payCode);
                                 tender.setAuthorisation(authorisation);
 
                                 csr.setTender(tender);

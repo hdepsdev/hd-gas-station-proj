@@ -54,7 +54,7 @@ public class TransPosDataSender {
 		}
 	}
 	
-	public void sendOrderToTransPos(Order order) throws Exception{
+	public void sendOrderToTransPos(final Order order) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{
@@ -87,7 +87,7 @@ public class TransPosDataSender {
 		}
 	}
 	
-	public void askPosToPrintReceipt(Order order) throws Exception{
+	public void askPosToPrintReceipt(final Order order) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{
