@@ -19,6 +19,13 @@
             </includes>
         </fileSet>
         <fileSet>
+        	<directory>extlib</directory>
+            <outputDirectory>/lib</outputDirectory>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>src/main/scripts</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
