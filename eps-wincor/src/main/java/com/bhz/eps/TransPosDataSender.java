@@ -3,6 +3,7 @@ package com.bhz.eps;
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -13,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 import com.bhz.eps.codec.TPDUDecoder;
 import com.bhz.eps.codec.TPDUEncoder;
 import com.bhz.eps.entity.Order;
+import com.bhz.eps.entity.PayMethod;
 import com.bhz.eps.entity.SaleItemEntity;
 import com.bhz.eps.pdu.transpos.TPDU;
 import com.bhz.eps.util.Converts;
@@ -54,6 +56,49 @@ public class TransPosDataSender {
 		}
 	}
 	
+	/**
+	 * 发送支付请求信息
+	 * @param payMethodList 支付方式列表
+	 * @throws Exception
+	 */
+	public void selectPayMethodToPos(List<PayMethod> payMethodList) throws Exception{
+		Bootstrap boot = new Bootstrap();
+		EventLoopGroup worker = new NioEventLoopGroup();
+		try{
+			boot.group(worker).option(ChannelOption.TCP_NODELAY, true)
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Integer.parseInt(Utils.systemConfiguration.getProperty("eps.client.data.upload.timeout")))
+				.channel(NioSocketChannel.class)
+				.handler(new ChannelInitializer<SocketChannel>(){
+
+					@Override
+					protected void initChannel(SocketChannel ch) throws Exception {
+						ch.pipeline().addLast(new TPDUEncoder());
+						ch.pipeline().addLast(new TPDUDecoder());
+						ch.pipeline().addLast(new SelectPayMethodHandler(payMethodList));
+					}
+					
+				});
+			ChannelFuture cf = boot.connect(this.transPosIP, this.transPosPort).sync();
+			cf.addListener(new ChannelFutureListener() {
+				
+				@Override
+				public void operationComplete(ChannelFuture future) throws Exception {
+					logger.debug("Established connection to " + transPosIP + " on port " + transPosPort);
+				}
+				
+			});
+			cf.channel().closeFuture().sync();
+				
+		}finally{
+			worker.shutdownGracefully();
+		}
+	}
+	
+	/**
+	 * 发送订单信息给交易POS，交易POS生成订单二维码
+	 * @param order 订单信息
+	 * @throws Exception
+	 */
 	public void sendOrderToTransPos(final Order order) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
@@ -87,6 +132,11 @@ public class TransPosDataSender {
 		}
 	}
 	
+	/**
+	 * 请求POS打单
+	 * @param order 订单信息
+	 * @throws Exception
+	 */
 	public void askPosToPrintReceipt(final Order order) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
@@ -119,6 +169,45 @@ public class TransPosDataSender {
 			worker.shutdownGracefully();
 		}
 	}
+}
+
+class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
+	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
+	List<PayMethod> pmList;
+	
+	public SelectPayMethodHandler(List<PayMethod> pmList) {
+		this.pmList = pmList;
+	}
+	
+	@Override
+	protected void messageReceived(ChannelHandlerContext ctx, TPDU msg) throws Exception {
+		logger.info("Receive POS Response[ " + msg  + " ]");
+		//@Todo 发送支付网关
+	}
+	
+	@Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+            throws Exception {
+        logger.error("", cause);
+        super.exceptionCaught(ctx, cause);
+    }
+	
+	@Override
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		ByteBuf b = Unpooled.buffer();
+		int pmCount = pmList.size();
+		b.writeByte(pmCount);
+		for(PayMethod pm: pmList){
+			b.writeByte(pm.getPayMethodCode());
+			b.writeBytes(Utils.convertGB(pm.getPayMethodName(),20).getBytes(Charset.forName("GB2312")));
+		}
+		
+		byte[] result = b.array();
+		logger.debug("Send pay method(s) to Trans POS.");
+        logger.debug(Arrays.toString(result));
+		ctx.writeAndFlush(result);
+	}
+	
 }
 
 class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{

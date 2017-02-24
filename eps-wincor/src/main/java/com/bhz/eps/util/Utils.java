@@ -5,9 +5,13 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
+
+import com.bhz.eps.entity.PayMethod;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -17,8 +21,12 @@ public class Utils {
 	private final static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
 	public final static Properties systemConfiguration = new Properties();
+	
+	public final static List<PayMethod> PAY_METHOD_LIST = new ArrayList<PayMethod>();
 
 	static {
+		PAY_METHOD_LIST.add(new PayMethod(1,"微信支付"));
+		PAY_METHOD_LIST.add(new PayMethod(2, "支付宝支付"));
 		try {
 			systemConfiguration.load(Utils.class.getClassLoader().getResourceAsStream("conf/sys.conf"));
 
