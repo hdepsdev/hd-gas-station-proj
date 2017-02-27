@@ -61,7 +61,7 @@ public class TransPosDataSender {
 	 * @param payMethodList 支付方式列表
 	 * @throws Exception
 	 */
-	public void selectPayMethodToPos(List<PayMethod> payMethodList) throws Exception{
+	public void selectPayMethodToPos(List<PayMethod> payMethodList,Order order) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{
@@ -74,7 +74,7 @@ public class TransPosDataSender {
 					protected void initChannel(SocketChannel ch) throws Exception {
 						ch.pipeline().addLast(new TPDUEncoder());
 						ch.pipeline().addLast(new TPDUDecoder());
-						ch.pipeline().addLast(new SelectPayMethodHandler(payMethodList));
+						ch.pipeline().addLast(new SelectPayMethodHandler(payMethodList,order));
 					}
 					
 				});
@@ -174,9 +174,11 @@ public class TransPosDataSender {
 class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
 	List<PayMethod> pmList;
+	Order order;
 	
-	public SelectPayMethodHandler(List<PayMethod> pmList) {
+	public SelectPayMethodHandler(List<PayMethod> pmList,Order order) {
 		this.pmList = pmList;
+		this.order = order;
 	}
 	
 	@Override

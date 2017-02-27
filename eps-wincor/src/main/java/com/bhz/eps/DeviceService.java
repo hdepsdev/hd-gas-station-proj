@@ -81,7 +81,7 @@ public class DeviceService {
                         Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendOrderToTransPos(order);
         	}else{
         		TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).selectPayMethodToPos(Utils.PAY_METHOD_LIST);
+                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).selectPayMethodToPos(Utils.PAY_METHOD_LIST,order);
         	}
             
         } else {
@@ -145,7 +145,7 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
                         Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendOrderToTransPos(order);
         	}else{
         		TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).selectPayMethodToPos(Utils.PAY_METHOD_LIST);
+                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).selectPayMethodToPos(Utils.PAY_METHOD_LIST,order);
         	}
 		}else{
 			logger.error("No Response from BPOS on device request.");
