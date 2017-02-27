@@ -1,8 +1,6 @@
 package com.bhz.eps.service.impl;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.annotation.Resource;
 
@@ -44,6 +42,7 @@ public class SaleItemServiceImpl implements SaleItemService {
     @Override
     public void saveSaleItems(Order order, List<CardServiceRequest.SaleItem> saleItemList){
         orderMapper.insert(order);
+        Set<SaleItemEntity> orderItems = new HashSet<SaleItemEntity>();
         for(com.bhz.eps.entity.CardServiceRequest.SaleItem item : saleItemList){
             com.bhz.eps.entity.SaleItemEntity si = new com.bhz.eps.entity.SaleItemEntity();
             si.setId(Utils.generateCompactUUID());
@@ -56,6 +55,8 @@ public class SaleItemServiceImpl implements SaleItemService {
             si.setOrderId(order.getOrderId());
             si.setAmount(item.getAmount());
             addSaleItem(si);
+            orderItems.add(si);
         }
+        order.setOrderItems(orderItems);
     }
 }
