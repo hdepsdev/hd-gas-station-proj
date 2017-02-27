@@ -131,6 +131,19 @@ public class TransPosDataSender {
 			worker.shutdownGracefully();
 		}
 	}
+
+    /**
+     * 发送信息给交易POS
+     * @param order 订单信息
+     * @throws Exception
+     */
+    public void sendMsgToTransPos(final Order order) throws Exception{
+        if(Utils.systemConfiguration.getProperty("scan.type").equalsIgnoreCase("initiative")){
+            sendOrderToTransPos(order);
+        }else{
+            selectPayMethodToPos(Utils.PAY_METHOD_LIST,order);
+        }
+    }
 	
 	/**
 	 * 请求POS打单

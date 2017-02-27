@@ -76,14 +76,8 @@ public class DeviceService {
 	
 	public void askBPosDisplay(final String message, final Order order) throws Exception{
         if ("0".equals(Utils.systemConfiguration.getProperty("eps.bpos.ds.send"))) {
-        	if(Utils.systemConfiguration.getProperty("scan.type").equalsIgnoreCase("initiative")){
-        		TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendOrderToTransPos(order);
-        	}else{
-        		TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).selectPayMethodToPos(Utils.PAY_METHOD_LIST,order);
-        	}
-            
+            TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
+                    Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendMsgToTransPos(order);
         } else {
             Bootstrap boot = new Bootstrap();
             EventLoopGroup worker = new NioEventLoopGroup();
@@ -140,13 +134,8 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 			logger.debug("Processed sender: [ " + msg.getApplicationSender() + " ] 's order...");
 			ctx.channel().pipeline().remove(this);
 			//DeviceService.this.submitOrderToWechat(this.order);
-			if(Utils.systemConfiguration.getProperty("scan.type").equalsIgnoreCase("initiative")){
-        		TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendOrderToTransPos(order);
-        	}else{
-        		TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).selectPayMethodToPos(Utils.PAY_METHOD_LIST,order);
-        	}
+            TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
+                    Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendMsgToTransPos(order);
 		}else{
 			logger.error("No Response from BPOS on device request.");
 		}
