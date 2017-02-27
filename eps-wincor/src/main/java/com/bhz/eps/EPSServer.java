@@ -35,9 +35,16 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 public class EPSServer {
 	
 	private static final Logger logger = LogManager.getLogger(EPSServer.class);
-	public final static ApplicationContext appctx = new ClassPathXmlApplicationContext(new String[]{"conf/application-context.xml"});
-	
-	public void start() throws Exception {
+    public final static ApplicationContext appctx = new ClassPathXmlApplicationContext(new String[]{
+            "conf/application-context.xml",//原eps配置
+            "classpath:/spring/applicationContext.xml",//积分配置
+            "classpath:/spring/app-db.xml",//积分配置
+            "classpath:/spring/spring-task.xml",//积分配置
+            "classpath:/conf/application-beans-fcomc-hb.xml",//消费配置
+            "classpath:/conf/application-context-fcomc.xml"//消费配置
+    });
+
+    public void start() throws Exception {
 		EventLoopGroup acceptor = new NioEventLoopGroup();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		ServerBootstrap sb = new ServerBootstrap();

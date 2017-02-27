@@ -2,12 +2,16 @@ package com.bhz.eps;
 
 import java.math.BigDecimal;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 
 import com.bhz.eps.util.WeiXinUtil;
+import com.bhz.fcomc.service.PreferentialPriceService;
+import com.bhz.posserver.entity.request.PreferentialPriceDetailsRequest;
+import com.bhz.posserver.entity.request.PreferentialPriceRequest;
+import com.bhz.posserver.entity.response.PreferentialPriceDetailsResponse;
+import com.bhz.posserver.entity.response.PreferentialPriceResponse;
+import com.tencent.protocol.pay_protocol.ScanPayReqData;
+import com.tencent.service.ScanPayService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -141,7 +145,7 @@ public class TransPosDataSender {
         if(Utils.systemConfiguration.getProperty("scan.type").equalsIgnoreCase("initiative")){
             sendOrderToTransPos(order);
         }else{
-            selectPayMethodToPos(Utils.PAY_METHOD_LIST,order);
+            selectPayMethodToPos(Utils.PAY_METHOD_LIST, order);
         }
     }
 	
@@ -197,7 +201,72 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	@Override
 	protected void messageReceived(ChannelHandlerContext ctx, TPDU msg) throws Exception {
 		logger.info("Receive POS Response[ " + msg  + " ]");
-		//@Todo 发送支付网关
+		//TODO 判断支付方式
+        if (true) {//如果是微信支付
+            //TODO 获取数据
+            String authCode = ""; //这个是扫码终端设备从用户手机上扫取到的支付授权号，这个号是跟用户用来支付的银行卡绑定的，有效期是1分钟
+            String  body = ""; //要支付的商品的描述信息，用户会在支付成功页面里看到这个信息
+            String  attach = ""; //支付订单里面可以填的附加数据，API会将提交的这个附加数据原样返回
+            String  outTradeNo = order.getOrderId(); //商户系统内部的订单号,32个字符内可包含字母, 确保在商户系统唯一
+            int totalFee = 0; //订单总金额，单位为“分”，只能整数
+            String  deviceInfo = ""; //商户自己定义的扫码支付终端设备号，方便追溯这笔交易发生在哪台终端设备上
+            String  spBillCreateIP = ""; //订单生成的机器IP
+            String  timeStart = ""; //订单生成时间， 格式为yyyyMMddHHmmss，如2009年12 月25 日9 点10 分10 秒表示为20091225091010。时区为GMT+8 beijing。该时间取自商户服务器
+            String  timeExpire = ""; //订单失效时间，格式同上
+            String  goodsTag = ""; //商品标记，微信平台配置的商品标记，用于优惠券或者满减使用
+
+            //计算优惠
+            PreferentialPriceService ps = (PreferentialPriceService) EPSServer.appctx.getBean("preferentialPriceService", PreferentialPriceService.class);
+            //优惠查询请求对象
+            PreferentialPriceRequest pps = new PreferentialPriceRequest();
+            //消费时间
+            pps.setTransactionTime(new Date().getTime());
+            //卡类型
+            pps.setCardType("I");
+            //卡号
+            pps.setCardNo("99000211111200001000");
+            //版本号 固定1
+            pps.setDbVersion(1);
+            //优惠查询请求明细集合
+            List<PreferentialPriceDetailsRequest> details = new ArrayList<PreferentialPriceDetailsRequest>();
+            for (SaleItemEntity entity : order.getOrderItems()) {
+                //优惠查询请求明细
+                PreferentialPriceDetailsRequest ppdr = new PreferentialPriceDetailsRequest();
+                //折前金额
+                ppdr.setAmountNoDiscount(entity.getAmount());
+                //折前单价
+                ppdr.setPriceNoDiscount(entity.getUnitPrice());
+                //消费数量
+                ppdr.setQuantity(entity.getQuantity());
+                //油品号
+                ppdr.setOilCode(entity.getProductCode());
+                details.add(ppdr);
+            }
+            pps.setDetails(details);
+            PreferentialPriceResponse ppr = ps.queryPreferentialPrice(Long.valueOf(Utils.systemConfiguration.getProperty("eps.server.merchant.id")), pps);
+            BigDecimal total = new BigDecimal(0);
+            for (PreferentialPriceDetailsResponse ppdr : ppr.getDetails()) {
+                total = total.add(ppdr.getAmountWithDiscount());
+            }
+            order.setPaymentAmount(total);
+            order.setCouponAmount(order.getOriginalAmount().subtract(total));
+            //discountType 优惠类型 0:不满足优惠条件 1:有优惠 2:无优惠
+            if(ppr.getDiscountType()==1){
+                logger.debug("客户享受刷卡优惠,折后金额:" + total);
+            }else if(ppr.getDiscountType() == 0){
+                logger.debug("客户不满足优惠条件");
+            }else if(ppr.getDiscountType() == 2){
+                logger.debug("客户已设置为无优惠");
+            }
+
+            //TODO 计算积分，由于目前消费时无用户信息，所以暂时无法实现
+
+            //向微信支付网关发送数据
+            ScanPayService scanPayService = new ScanPayService();
+            scanPayService.request(new ScanPayReqData(authCode, body, attach, outTradeNo, totalFee, deviceInfo, spBillCreateIP, timeStart, timeExpire, goodsTag));
+
+            //TODO 更新数据
+        }
 	}
 	
 	@Override
