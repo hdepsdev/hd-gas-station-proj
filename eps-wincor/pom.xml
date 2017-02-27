@@ -217,7 +217,7 @@
 					<target>${jdk-compiler-level}</target>
 					<encoding>${project.build.sourceEncoding}</encoding>
 					<compilerArguments>
-						<extdirs>${bbsedir}/extlib</extdirs>
+						<extdirs>${basedir}/extlib</extdirs>
 					</compilerArguments>
 					<skip>${maven.test.skip}</skip>
 				</configuration>
