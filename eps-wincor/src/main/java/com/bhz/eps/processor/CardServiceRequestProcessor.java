@@ -124,22 +124,22 @@ public class CardServiceRequestProcessor extends BizProcessor {
         final DeviceService ds = DeviceService.getInstance(Utils.systemConfiguration.getProperty("eps.bpos.ds.ip"),
                 Integer.parseInt(Utils.systemConfiguration.getProperty("eps.bpos.ds.port")));
 
+        //轮询查询交易状态，当交易完成时停止轮询并将数据传出
+        logger.debug("create schedule");
+        ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
+        service.scheduleWithFixedDelay(new CheckStatus(service, order.getOrderId(), channel, csr), 0, 1, TimeUnit.SECONDS);
+
         new Thread(){
             @Override
             public void run() {
                 try {
                     logger.debug("send message");
-                    ds.askBPosDisplay("正在支付，请稍后...", order);
+                    ds.askBPosDisplay("正在支付，请稍后...", order, service);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }.start();
-
-        //轮询查询交易状态，当交易完成时停止轮询并将数据传出
-        logger.debug("create schedule");
-        ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
-        ScheduledFuture f = service.scheduleWithFixedDelay(new CheckStatus(service, order.getOrderId(), channel, csr), 0, 1, TimeUnit.SECONDS);
     }
 
     class CheckStatus implements Runnable {

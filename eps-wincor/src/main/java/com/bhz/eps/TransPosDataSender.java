@@ -1,20 +1,18 @@
 package com.bhz.eps;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
+import java.net.InetAddress;
 import java.nio.charset.Charset;
-import java.util.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 
-import com.bhz.eps.entity.ScanPayReturn;
-import com.bhz.eps.service.OrderService;
-import com.bhz.eps.util.WeiXinUtil;
-import com.bhz.fcomc.service.PreferentialPriceService;
-import com.bhz.posserver.entity.request.PreferentialPriceDetailsRequest;
-import com.bhz.posserver.entity.request.PreferentialPriceRequest;
-import com.bhz.posserver.entity.response.PreferentialPriceDetailsResponse;
-import com.bhz.posserver.entity.response.PreferentialPriceResponse;
-import com.tencent.protocol.pay_protocol.ScanPayReqData;
-import com.tencent.service.ScanPayService;
-import com.thoughtworks.xstream.XStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -31,8 +29,18 @@ import com.bhz.eps.entity.Order;
 import com.bhz.eps.entity.PayMethod;
 import com.bhz.eps.entity.SaleItemEntity;
 import com.bhz.eps.pdu.transpos.TPDU;
+import com.bhz.eps.service.OrderService;
 import com.bhz.eps.util.Converts;
 import com.bhz.eps.util.Utils;
+import com.bhz.fcomc.service.PreferentialPriceService;
+import com.bhz.posserver.entity.request.PreferentialPriceDetailsRequest;
+import com.bhz.posserver.entity.request.PreferentialPriceRequest;
+import com.bhz.posserver.entity.response.PreferentialPriceDetailsResponse;
+import com.bhz.posserver.entity.response.PreferentialPriceResponse;
+import com.tencent.WXPay;
+import com.tencent.business.ScanPayBusiness.ResultListener;
+import com.tencent.protocol.pay_protocol.ScanPayReqData;
+import com.tencent.protocol.pay_protocol.ScanPayResData;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -75,7 +83,7 @@ public class TransPosDataSender {
 	 * @param payMethodList 支付方式列表
 	 * @throws Exception
 	 */
-	public void selectPayMethodToPos(List<PayMethod> payMethodList,Order order) throws Exception{
+	public void selectPayMethodToPos(List<PayMethod> payMethodList,Order order,ScheduledExecutorService service) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{
@@ -88,7 +96,7 @@ public class TransPosDataSender {
 					protected void initChannel(SocketChannel ch) throws Exception {
 						ch.pipeline().addLast(new TPDUEncoder());
 						ch.pipeline().addLast(new TPDUDecoder());
-						ch.pipeline().addLast(new SelectPayMethodHandler(payMethodList,order));
+						ch.pipeline().addLast(new SelectPayMethodHandler(payMethodList,order,service));
 					}
 					
 				});
@@ -151,11 +159,11 @@ public class TransPosDataSender {
      * @param order 订单信息
      * @throws Exception
      */
-    public void sendMsgToTransPos(final Order order) throws Exception{
+    public void sendMsgToTransPos(final Order order, ScheduledExecutorService service) throws Exception{
         if(Utils.systemConfiguration.getProperty("scan.type").equalsIgnoreCase("initiative")){
             sendOrderToTransPos(order);
         }else{
-            selectPayMethodToPos(Utils.PAY_METHOD_LIST, order);
+            selectPayMethodToPos(Utils.PAY_METHOD_LIST, order, service);
         }
     }
 	
@@ -200,12 +208,6 @@ public class TransPosDataSender {
 
 class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
-    private static XStream xstream;
-    static {
-        xstream = new XStream();
-        xstream.autodetectAnnotations(false);//停止自动扫描
-        xstream.ignoreUnknownElements();//忽略多余节点
-    }
     // 支付宝当面付2.0服务
     private static AlipayTradeService tradeService;
     {
@@ -219,118 +221,124 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
          */
         tradeService = new AlipayTradeServiceImpl.ClientBuilder().build();
     }
+    private OrderService orderService = EPSServer.appctx.getBean("orderService", OrderService.class);
     
 	List<PayMethod> pmList;
 	Order order;
+	ScheduledExecutorService service;
 	
-	public SelectPayMethodHandler(List<PayMethod> pmList,Order order) {
+	public SelectPayMethodHandler(List<PayMethod> pmList,Order order,ScheduledExecutorService service) {
 		this.pmList = pmList;
-		this.order = order;
+		this.order = orderService.getOrderWithSaleItemsById(order.getOrderId());//重新查询以便获取明细数据
+		this.service = service;//轮询交易结果的定时任务，交易失败时要关闭
 	}
 	
 	@Override
 	protected void messageReceived(ChannelHandlerContext ctx, TPDU msg) throws Exception {
 		logger.info("Receive POS Response[ " + msg  + " ]");
         try {
-            //TODO 判断支付方式
-            if (true) {//如果是微信支付
-                //TODO 获取数据
-                String authCode = ""; //这个是扫码终端设备从用户手机上扫取到的支付授权号，这个号是跟用户用来支付的银行卡绑定的，有效期是1分钟
-                String body = ""; //要支付的商品的描述信息，用户会在支付成功页面里看到这个信息
-                String attach = ""; //支付订单里面可以填的附加数据，API会将提交的这个附加数据原样返回
-                String outTradeNo = order.getOrderId(); //商户系统内部的订单号,32个字符内可包含字母, 确保在商户系统唯一
-                int totalFee = 0; //订单总金额，单位为“分”，只能整数
-                String deviceInfo = ""; //商户自己定义的扫码支付终端设备号，方便追溯这笔交易发生在哪台终端设备上
-                String spBillCreateIP = ""; //订单生成的机器IP
-                String timeStart = ""; //订单生成时间， 格式为yyyyMMddHHmmss，如2009年12 月25 日9 点10 分10 秒表示为20091225091010。时区为GMT+8 beijing。该时间取自商户服务器
-                String timeExpire = ""; //订单失效时间，格式同上
-                String goodsTag = ""; //商品标记，微信平台配置的商品标记，用于优惠券或者满减使用
+        	//解析POS返回数据
+        	byte[] bytes = msg.getBody().getData().getContent();
+        	ByteArrayInputStream reader = new ByteArrayInputStream(bytes);
+        	int type = reader.read();//支付类型
+        	byte[] bytes_code = new byte[20];
+        	reader.read(bytes_code);
+        	String code = new String(bytes_code).trim();//条码
 
-                //计算优惠
-                PreferentialPriceService ps = (PreferentialPriceService) EPSServer.appctx.getBean("preferentialPriceService", PreferentialPriceService.class);
-                //优惠查询请求对象
-                PreferentialPriceRequest pps = new PreferentialPriceRequest();
-                //消费时间
-                pps.setTransactionTime(new Date().getTime());
-                //卡类型
-                pps.setCardType("I");
-                //卡号
-                pps.setCardNo("99000211111200001000");
-                //版本号 固定1
-                pps.setDbVersion(1);
-                //优惠查询请求明细集合
-                List<PreferentialPriceDetailsRequest> details = new ArrayList<PreferentialPriceDetailsRequest>();
+            discount();//计算优惠
+            
+            //判断支付方式
+            if (type == 1) {//如果是微信支付
+                String authCode; //这个是扫码终端设备从用户手机上扫取到的支付授权号，这个号是跟用户用来支付的银行卡绑定的，有效期是1分钟
+                String body; //要支付的商品的描述信息，用户会在支付成功页面里看到这个信息
+                String attach; //支付订单里面可以填的附加数据，API会将提交的这个附加数据原样返回
+                String outTradeNo; //商户系统内部的订单号,32个字符内可包含字母, 确保在商户系统唯一
+                int totalFee; //订单总金额，单位为“分”，只能整数
+                String deviceInfo; //商户自己定义的扫码支付终端设备号，方便追溯这笔交易发生在哪台终端设备上
+                String spBillCreateIP; //订单生成的机器IP
+                String timeStart; //订单生成时间， 格式为yyyyMMddHHmmss，如2009年12 月25 日9 点10 分10 秒表示为20091225091010。时区为GMT+8 beijing。该时间取自商户服务器
+                String timeExpire; //订单失效时间，格式同上
+                String goodsTag; //商品标记，微信平台配置的商品标记，用于优惠券或者满减使用
+                
+                //组织数据
+                authCode = code;
+                StringBuilder temp = new StringBuilder(order.getMerchantName());
+                temp.append("-");
                 for (SaleItemEntity entity : order.getOrderItems()) {
-                    //优惠查询请求明细
-                    PreferentialPriceDetailsRequest ppdr = new PreferentialPriceDetailsRequest();
-                    //折前金额
-                    ppdr.setAmountNoDiscount(entity.getAmount());
-                    //折前单价
-                    ppdr.setPriceNoDiscount(entity.getUnitPrice());
-                    //消费数量
-                    ppdr.setQuantity(entity.getQuantity());
-                    //油品号
-                    ppdr.setOilCode(entity.getProductCode());
-                    details.add(ppdr);
+                	temp.append(entity.getItemName());
+                	temp.append(",");
                 }
-                pps.setDetails(details);
-                PreferentialPriceResponse ppr = ps.queryPreferentialPrice(Long.valueOf(Utils.systemConfiguration.getProperty("eps.server.merchant.id")), pps);
-                BigDecimal total = new BigDecimal(0);
-                for (PreferentialPriceDetailsResponse ppdr : ppr.getDetails()) {
-                    total = total.add(ppdr.getAmountWithDiscount());
-                }
-                order.setPaymentAmount(total);
-                order.setCouponAmount(order.getOriginalAmount().subtract(total));
-                //discountType 优惠类型 0:不满足优惠条件 1:有优惠 2:无优惠
-                if (ppr.getDiscountType() == 1) {
-                    logger.debug("客户享受刷卡优惠,折后金额:" + total);
-                } else if (ppr.getDiscountType() == 0) {
-                    logger.debug("客户不满足优惠条件");
-                } else if (ppr.getDiscountType() == 2) {
-                    logger.debug("客户已设置为无优惠");
-                }
-                totalFee = total.multiply(new BigDecimal(100)).intValue();
-
-                //TODO 计算积分，由于目前消费时无用户信息，所以暂时无法实现
+                body = temp.deleteCharAt(temp.length() - 1).toString();
+                attach = "";
+                outTradeNo = order.getOrderId();
+                totalFee = order.getPaymentAmount().multiply(new BigDecimal(100)).intValue();
+                deviceInfo = "";
+                spBillCreateIP = "";
+                timeStart = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+                Calendar c = Calendar.getInstance();
+                c.add(Calendar.MINUTE, 1);
+                timeExpire = new SimpleDateFormat("yyyyMMddHHmmss").format(c.getTime());
+                goodsTag = "";
 
                 //向微信支付网关发送数据
-                ScanPayService scanPayService = new ScanPayService();
-                String xml = scanPayService.request(new ScanPayReqData(authCode, body, attach, outTradeNo, totalFee, deviceInfo, spBillCreateIP, timeStart, timeExpire, goodsTag));
+                ScanPayReqData scanPayReqData = new ScanPayReqData(authCode, body, attach, outTradeNo, totalFee, deviceInfo, spBillCreateIP, timeStart, timeExpire, goodsTag);
+                WXPay.doScanPayBusiness(scanPayReqData, new ResultListener(){
 
-                //解析返回值
-                xstream.setMode(XStream.NO_REFERENCES);
-                xstream.alias("xml", ScanPayReturn.class);//设置根节点名
-                xstream.processAnnotations(ScanPayReturn.class);
-                ScanPayReturn spr = (ScanPayReturn) xstream.fromXML(xml);
+					@Override
+					public void onFail(ScanPayResData scanPayResData) {
+						payFail();
+					}
 
-                if ("SUCCESS".equals(spr.getResult_code()) && "SUCCESS".equals(spr.getReturn_code())) {
-                    //更新数据
-                    OrderService ordersrv = EPSServer.appctx.getBean("orderService", OrderService.class);
-                    order.setStatus(Order.STATUS_SUCCESS);
-                    ordersrv.updateOrder(order);
-                } else {
-                    //处理异常
-                    if (!"SUCCESS".equals(spr.getReturn_code())) {
-                        logger.error("微信刷卡支付通信异常：" + spr.getReturn_msg());
-                    } else {
-                        logger.error("微信刷卡支付业务异常：" + spr.getErr_code() + " " + spr.getErr_code_des());
-                    }
-                }
-            } else if (true) {//如果是支付宝
+					@Override
+					public void onFailByAuthCodeExpire(ScanPayResData scanPayResData) {
+						payFail();
+					}
+
+					@Override
+					public void onFailByAuthCodeInvalid(ScanPayResData scanPayResData) {
+						payFail();
+					}
+
+					@Override
+					public void onFailByMoneyNotEnough(ScanPayResData scanPayResData) {
+						payFail();
+					}
+
+					@Override
+					public void onFailByReturnCodeError(ScanPayResData scanPayResData) {
+						payFail();
+					}
+
+					@Override
+					public void onFailByReturnCodeFail(ScanPayResData scanPayResData) {
+						payFail();
+					}
+
+					@Override
+					public void onFailBySignInvalid(ScanPayResData scanPayResData) {
+						payFail();
+					}
+
+					@Override
+					public void onSuccess(ScanPayResData scanPayResData) {
+						paySuccess();
+					}
+                	
+                });
+            } else if (type == 2) {//如果是支付宝
             	// (必填) 商户网站订单系统中唯一订单号，64个字符以内，只能包含字母、数字、下划线，
                 // 需保证商户系统端不能重复，建议通过数据库sequence生成，
-                String outTradeNo = "tradepay" + System.currentTimeMillis()
-                                    + (long) (Math.random() * 10000000L);
+                String outTradeNo = order.getOrderId();
 
                 // (必填) 订单标题，粗略描述用户的支付目的。如“xxx品牌xxx门店消费”
-                String subject = "xxx品牌xxx门店当面付消费";
+                String subject = order.getMerchantName() + "消费";
 
                 // (必填) 订单总金额，单位为元，不能超过1亿元
                 // 如果同时传入了【打折金额】,【不可打折金额】,【订单总金额】三者,则必须满足如下条件:【订单总金额】=【打折金额】+【不可打折金额】
-                String totalAmount = "0.01";
+                String totalAmount = order.getPaymentAmount().toString();
 
                 // (必填) 付款条码，用户支付宝钱包手机app点击“付款”产生的付款条码
-                String authCode = "用户自己的支付宝付款码"; // 条码示例，286648048691290423
+                String authCode = code; // 条码示例，286648048691290423
                 // (可选，根据需要决定是否使用) 订单可打折金额，可以配合商家平台配置折扣活动，如果订单部分商品参与打折，可以将部分商品总价填写至此字段，默认全部商品可打折
                 // 如果该值未传入,但传入了【订单总金额】,【不可打折金额】 则该值默认为【订单总金额】- 【不可打折金额】
                 //        String discountableAmount = "1.00"; //
@@ -344,13 +352,13 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                 String sellerId = "";
 
                 // 订单描述，可以对交易或商品进行一个详细地描述，比如填写"购买商品3件共20.00元"
-                String body = "购买商品3件共20.00元";
+                String body = "";
 
                 // 商户操作员编号，添加此参数可以为商户操作员做销售统计
-                String operatorId = "test_operator_id";
+                String operatorId = "";
 
                 // (必填) 商户门店编号，通过门店号和商家后台可以配置精准到门店的折扣信息，详询支付宝技术支持
-                String storeId = "test_store_id";
+                String storeId = "";
 
                 // 业务扩展参数，目前可添加由支付宝分配的系统商编号(通过setSysServiceProviderId方法)，详情请咨询支付宝技术支持
                 String providerId = "2088100200300400500";
@@ -362,14 +370,20 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 
                 // 商品明细列表，需填写购买商品详细信息，
                 List<GoodsDetail> goodsDetailList = new ArrayList<GoodsDetail>();
-                // 创建一个商品信息，参数含义分别为商品id（使用国标）、名称、单价（单位为分）、数量，如果需要添加商品类别，详见GoodsDetail
-                GoodsDetail goods1 = GoodsDetail.newInstance("goods_id001", "xxx面包", 1000, 1);
-                // 创建好一个商品后添加至商品明细列表
-                goodsDetailList.add(goods1);
-
-                // 继续创建并添加第一条商品信息，用户购买的产品为“黑人牙刷”，单价为5.00元，购买了两件
-                GoodsDetail goods2 = GoodsDetail.newInstance("goods_id002", "xxx牙刷", 500, 2);
-                goodsDetailList.add(goods2);
+                StringBuilder temp = new StringBuilder();
+                for (SaleItemEntity entity : order.getOrderItems()) {
+                	temp.append(entity.getItemName());
+                	temp.append(",");
+                    // 创建一个商品信息，参数含义分别为商品id（使用国标）、名称、单价（单位为分）、数量，如果需要添加商品类别，详见GoodsDetail
+                    GoodsDetail goods = GoodsDetail.newInstance(entity.getId(), entity.getItemName(), 
+                    		entity.getUnitPrice().multiply(new BigDecimal(100)).longValue(), entity.getQuantity().intValue());
+                    // 创建好一个商品后添加至商品明细列表
+                    goodsDetailList.add(goods);
+                }
+                if (temp.length() > 0) {
+                	temp = temp.deleteCharAt(temp.length() - 1);
+                }
+                body = temp.toString();
 
                 // 创建条码支付请求builder，设置请求参数
                 AlipayTradePayRequestBuilder builder = new AlipayTradePayRequestBuilder()
@@ -385,18 +399,22 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                 switch (result.getTradeStatus()) {
                     case SUCCESS:
                     	logger.info("支付宝支付成功: )");
+                    	paySuccess();
                         break;
 
                     case FAILED:
                     	logger.error("支付宝支付失败!!!");
+                    	payFail();
                         break;
 
                     case UNKNOWN:
                     	logger.error("系统异常，订单状态未知!!!");
+                    	payFail();
                         break;
 
                     default:
                     	logger.error("不支持的交易状态，交易返回异常!!!");
+                    	payFail();
                         break;
                 }
             }
@@ -428,6 +446,70 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 		ctx.writeAndFlush(result);
 	}
 	
+	/**
+	 * 计算优惠
+	 */
+	private void discount() {
+        PreferentialPriceService ps = (PreferentialPriceService) EPSServer.appctx.getBean("preferentialPriceService", PreferentialPriceService.class);
+        //优惠查询请求对象
+        PreferentialPriceRequest pps = new PreferentialPriceRequest();
+        //消费时间
+        pps.setTransactionTime(new Date().getTime());
+        //卡类型
+        pps.setCardType("I");
+        //卡号
+        pps.setCardNo("99000211111200001000");
+        //版本号 固定1
+        pps.setDbVersion(1);
+        //优惠查询请求明细集合
+        List<PreferentialPriceDetailsRequest> details = new ArrayList<PreferentialPriceDetailsRequest>();
+        for (SaleItemEntity entity : order.getOrderItems()) {
+            //优惠查询请求明细
+            PreferentialPriceDetailsRequest ppdr = new PreferentialPriceDetailsRequest();
+            //折前金额
+            ppdr.setAmountNoDiscount(entity.getAmount());
+            //折前单价
+            ppdr.setPriceNoDiscount(entity.getUnitPrice());
+            //消费数量
+            ppdr.setQuantity(entity.getQuantity());
+            //油品号
+            ppdr.setOilCode(entity.getProductCode());
+            details.add(ppdr);
+        }
+        pps.setDetails(details);
+        PreferentialPriceResponse ppr = ps.queryPreferentialPrice(Long.valueOf(Utils.systemConfiguration.getProperty("eps.server.merchant.id")), pps);
+        BigDecimal total = new BigDecimal(0);
+        for (PreferentialPriceDetailsResponse ppdr : ppr.getDetails()) {
+            total = total.add(ppdr.getAmountWithDiscount());
+        }
+        order.setPaymentAmount(total);
+        order.setCouponAmount(order.getOriginalAmount().subtract(total));
+        //discountType 优惠类型 0:不满足优惠条件 1:有优惠 2:无优惠
+        if (ppr.getDiscountType() == 1) {
+            logger.debug("客户享受刷卡优惠,折后金额:" + total);
+        } else if (ppr.getDiscountType() == 0) {
+            logger.debug("客户不满足优惠条件");
+        } else if (ppr.getDiscountType() == 2) {
+            logger.debug("客户已设置为无优惠");
+        }
+	}
+	
+	/**
+	 * 支付成功后调用
+	 */
+	private void paySuccess() {
+        order.setStatus(Order.STATUS_SUCCESS);
+        orderService.updateOrder(order);
+
+        //TODO 计算积分，由于目前消费时无用户信息，所以暂时无法实现
+	}
+	
+	/**
+	 * 支付失败后调用
+	 */
+	private void payFail() {
+		service.shutdownNow();
+	}
 }
 
 class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{
