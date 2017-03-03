@@ -243,7 +243,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         	reader.read(bytes_code);
         	String code = new String(bytes_code).trim();//条码
 
-            discount();//计算优惠
+            discount(type, code);//计算优惠
             
             //判断支付方式
             if (type == 1) {//如果是微信支付
@@ -319,7 +319,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 
 					@Override
 					public void onSuccess(ScanPayResData scanPayResData) {
-						paySuccess(type, code);
+						paySuccess();
 					}
                 	
                 });
@@ -397,7 +397,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                 switch (result.getTradeStatus()) {
                     case SUCCESS:
                     	logger.info("支付宝支付成功: )");
-                    	paySuccess(type, code);
+                    	paySuccess();
                         break;
 
                     case FAILED:
@@ -462,7 +462,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	/**
 	 * 计算优惠
 	 */
-	private void discount() {
+	private void discount(int type, String code) {
         PreferentialPriceService ps = (PreferentialPriceService) EPSServer.appctx.getBean("preferentialPriceService", PreferentialPriceService.class);
         //优惠查询请求对象
         PreferentialPriceRequest pps = new PreferentialPriceRequest();
@@ -505,26 +505,35 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         } else if (ppr.getDiscountType() == 2) {
             logger.debug("客户已设置为无优惠");
         }
-	}
-	
-	/**
-	 * 支付成功后调用
-	 */
-	private void paySuccess(int type, String code) {
+        
 		try {
-			order.setStatus(Order.STATUS_SUCCESS);// 设置订单状态为交易成功
-			orderService.updateOrder(order);
-
 			// 获取用户信息
 			if (type == 1) {// 只有微信支付可以获取用户数据
 				AuthcodeToOpenidServiceImpl atoser = new AuthcodeToOpenidServiceImpl();
 				AuthcodeToOpenidResData result = atoser.request(new AuthcodeToOpenidReqData(code));
 				if ("SUCCESS".equals(result.getReturn_code()) && "SUCCESS".equals(result.getResult_code())) {
 					String openId = result.getOpenid();
-					//TODO 通过openid获取用户信息
+					// TODO 通过openid获取用户信息
 					logger.debug("-----------------openid:" + openId + "----------------");
+				} else {
+					logger.error("获取openid失败！");
+					payFail();
 				}
 			}
+		} catch (Exception e) {
+			payFail();
+			logger.error("", e);
+		}
+	}
+	
+	/**
+	 * 支付成功后调用
+	 */
+	private void paySuccess() {
+		try {
+			order.setStatus(Order.STATUS_SUCCESS);// 设置订单状态为交易成功
+			orderService.updateOrder(order);
+			
 			// TODO 计算积分，由于目前消费时无用户信息，所以暂时无法实现
 		} catch (Exception e) {
 			logger.error("", e);
