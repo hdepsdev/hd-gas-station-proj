@@ -430,6 +430,18 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		byte[] stationId = Converts.str2Bcd(order.getMerchantId());
+		int casherId = Integer.parseInt(order.getGenerator().split("\\|")[1]);
+		byte[] casherNo = Converts.int2U16(casherId);
+		byte[] magic = new byte[]{0x30,0x30,0x30,0x30};
+		byte[] cmd = new byte[]{'7','2'};
+		byte[] tag = new byte[]{'0','0'};
+		
+		byte[] tmp = Utils.concatTwoByteArray(stationId,casherNo);
+		byte[] tmp1 = Utils.concatTwoByteArray(tmp, magic);
+		byte[] tmp2 = Utils.concatTwoByteArray(tmp1, cmd);
+		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
+		
 		ByteBuf b = Unpooled.buffer();
 		int pmCount = pmList.size();
 		b.writeByte(pmCount);
@@ -438,7 +450,10 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 			b.writeBytes(Utils.convertGB(pm.getPayMethodName(),20).getBytes(Charset.forName("GB2312")));
 		}
 		
-		byte[] result = b.array();
+		byte[] data = b.array();
+		
+		byte[] result = Utils.concatTwoByteArray(tmp3, data);
+		
 		logger.debug("Send pay method(s) to Trans POS.");
         logger.debug(Arrays.toString(result));
 		ctx.writeAndFlush(result);
