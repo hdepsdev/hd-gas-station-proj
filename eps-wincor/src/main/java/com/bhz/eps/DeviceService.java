@@ -75,10 +75,10 @@ public class DeviceService {
 		}
 	}
 	
-	public void askBPosDisplay(final String message, final Order order, final ScheduledExecutorService service) throws Exception{
+	public void askBPosDisplay(final String message, final Order order) throws Exception{
         if ("0".equals(Utils.systemConfiguration.getProperty("eps.bpos.ds.send"))) {
             TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                    Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendMsgToTransPos(order, service);
+                    Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendMsgToTransPos(order);
         } else {
             Bootstrap boot = new Bootstrap();
             EventLoopGroup worker = new NioEventLoopGroup();
@@ -91,7 +91,7 @@ public class DeviceService {
                             protected void initChannel(SocketChannel ch) throws Exception {
                                 ch.pipeline().addLast(new WincorPosMsgEncoder());
                                 ch.pipeline().addLast(new WincorPosMsgDecoder());
-                                ch.pipeline().addLast(new DeviceServiceMessageHandler(message, order, service));
+                                ch.pipeline().addLast(new DeviceServiceMessageHandler(message, order));
                             }
 
                         });
@@ -116,7 +116,6 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 	private static final Logger logger = LogManager.getLogger(DeviceServiceMessageHandler.class);
 	String message = "";
 	Order order;
-	ScheduledExecutorService service;
 	
 	private static XStream xstream;
 	static {
@@ -125,10 +124,9 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 		xstream.ignoreUnknownElements();
 	}
 	
-	public DeviceServiceMessageHandler(String message, Order order, ScheduledExecutorService service) {
+	public DeviceServiceMessageHandler(String message, Order order) {
 		this.message = message;
 		this.order = order;
-		this.service = service;
 	}
 	@Override
 	protected void messageReceived(ChannelHandlerContext ctx, DeviceResponse msg) throws Exception {
@@ -138,7 +136,7 @@ class DeviceServiceMessageHandler extends SimpleChannelInboundHandler<DeviceResp
 			ctx.channel().pipeline().remove(this);
 			//DeviceService.this.submitOrderToWechat(this.order);
             TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
-                    Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendMsgToTransPos(order, service);
+                    Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port"))).sendMsgToTransPos(order);
 		}else{
 			logger.error("No Response from BPOS on device request.");
 		}

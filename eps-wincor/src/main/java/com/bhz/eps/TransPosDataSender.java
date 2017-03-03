@@ -83,7 +83,7 @@ public class TransPosDataSender {
 	 * @param payMethodList 支付方式列表
 	 * @throws Exception
 	 */
-	public void selectPayMethodToPos(List<PayMethod> payMethodList,Order order,ScheduledExecutorService service) throws Exception{
+	public void selectPayMethodToPos(List<PayMethod> payMethodList,Order order) throws Exception{
 		Bootstrap boot = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		try{
@@ -96,7 +96,7 @@ public class TransPosDataSender {
 					protected void initChannel(SocketChannel ch) throws Exception {
 						ch.pipeline().addLast(new TPDUEncoder());
 						ch.pipeline().addLast(new TPDUDecoder());
-						ch.pipeline().addLast(new SelectPayMethodHandler(payMethodList,order,service));
+						ch.pipeline().addLast(new SelectPayMethodHandler(payMethodList,order));
 					}
 					
 				});
@@ -159,11 +159,11 @@ public class TransPosDataSender {
      * @param order 订单信息
      * @throws Exception
      */
-    public void sendMsgToTransPos(final Order order, ScheduledExecutorService service) throws Exception{
+    public void sendMsgToTransPos(final Order order) throws Exception{
         if(Utils.systemConfiguration.getProperty("scan.type").equalsIgnoreCase("initiative")){
             sendOrderToTransPos(order);
         }else{
-            selectPayMethodToPos(Utils.PAY_METHOD_LIST, order, service);
+            selectPayMethodToPos(Utils.PAY_METHOD_LIST, order);
         }
     }
 	
@@ -225,12 +225,10 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
     
 	List<PayMethod> pmList;
 	Order order;
-	ScheduledExecutorService service;
 	
-	public SelectPayMethodHandler(List<PayMethod> pmList,Order order,ScheduledExecutorService service) {
+	public SelectPayMethodHandler(List<PayMethod> pmList,Order order) {
 		this.pmList = pmList;
 		this.order = orderService.getOrderWithSaleItemsById(order.getOrderId());//重新查询以便获取明细数据
-		this.service = service;//轮询交易结果的定时任务，交易失败时要关闭
 	}
 	
 	@Override
@@ -498,7 +496,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	 * 支付成功后调用
 	 */
 	private void paySuccess() {
-        order.setStatus(Order.STATUS_SUCCESS);
+        order.setStatus(Order.STATUS_SUCCESS);//设置订单状态为交易成功
         orderService.updateOrder(order);
 
         //TODO 计算积分，由于目前消费时无用户信息，所以暂时无法实现
@@ -508,7 +506,11 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	 * 支付失败后调用
 	 */
 	private void payFail() {
-		service.shutdownNow();
+        int status = order.getStatus();
+        if (status == Order.STATUS_WAIT) {//只有待支付状态的订单才能改变状态
+            order.setStatus(Order.STATUS_ERROR);//设置订单状态为交易失败
+            int i = orderService.updateOrder(order);
+        }
 	}
 }
 
