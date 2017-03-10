@@ -62,6 +62,9 @@ public class TransPosDataSender {
 	private String transPosIP;
 	private int transPosPort;
 	
+	public final static int MSG_INFO=0x01;
+	public final static int MSG_ERROR=0x02;
+	
 	private static TransPosDataSender sender;
 	
 	private TransPosDataSender(String ip,int port){
@@ -235,8 +238,19 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	protected void messageReceived(ChannelHandlerContext ctx, TPDU msg) throws Exception {
 		logger.info("Receive POS Response[ " + msg  + " ]");
         try {
+        	//解析返回消息
+        	byte[] tagBytes = msg.getBody().getHeader().getTag();
+        	//当消息为非正常选择，则循环调用选择列表请求。
+        	if(tagBytes[0]!='0' || tagBytes[1]!='0'){
+        		TransPosDataSender tpd = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
+                        Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
+        		tpd.selectPayMethodToPos(Utils.PAY_METHOD_LIST, order);
+        		ctx.channel().close();
+        		return;
+        	}
         	//解析POS返回数据
         	byte[] bytes = msg.getBody().getData().getContent();
+        	
         	ByteArrayInputStream reader = new ByteArrayInputStream(bytes);
         	int type = reader.read();//支付类型
         	byte[] bytes_code = new byte[20];
@@ -280,8 +294,10 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 
                 //向微信支付网关发送数据
                 ScanPayReqData scanPayReqData = new ScanPayReqData(authCode, body, attach, outTradeNo, totalFee, deviceInfo, spBillCreateIP, timeStart, timeExpire, goodsTag);
+                
+                
                 WXPay.doScanPayBusiness(scanPayReqData, new ResultListener(){
-
+                	
 					@Override
 					public void onFail(ScanPayResData scanPayResData) {
 						payFail();
@@ -415,6 +431,8 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     	payFail();
                         break;
                 }
+            }else if(type==3){//如果是储值会员
+            	
             }
         } catch(Exception e) {
             logger.error("", e);
@@ -430,6 +448,10 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		showPayList(ctx);
+	}
+	
+	private void showPayList(ChannelHandlerContext ctx){
 		byte[] stationId = Converts.str2Bcd(order.getMerchantId());
 		int casherId = Integer.parseInt(order.getGenerator().split("\\|")[1]);
 		byte[] casherNo = Converts.int2U16(casherId);
@@ -442,21 +464,31 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 		byte[] tmp2 = Utils.concatTwoByteArray(tmp1, cmd);
 		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
 		
-		ByteBuf b = Unpooled.buffer();
-		int pmCount = pmList.size();
-		b.writeByte(pmCount);
-		for(PayMethod pm: pmList){
-			b.writeByte(pm.getPayMethodCode());
-			b.writeBytes(Utils.convertGB(pm.getPayMethodName(),20).getBytes(Charset.forName("GB2312")));
-		}
 		
-		byte[] data = b.array();
+		byte[] data = askPos2PayList(TransPosDataSender.MSG_INFO,"请选择支付方式").array();
 		
 		byte[] result = Utils.concatTwoByteArray(tmp3, data);
 		
 		logger.debug("Send pay method(s) to Trans POS.");
         logger.debug(Arrays.toString(result));
 		ctx.writeAndFlush(result);
+	}
+	
+	private ByteBuf askPos2PayList(int msgType,String msg){
+		byte[] msgBytes = msg.getBytes(Charset.forName("GB2312"));
+		int msgLength = msgBytes.length;
+		
+		ByteBuf b = Unpooled.buffer();
+		int pmCount = pmList.size();
+		b.writeByte(msgLength);//显示信息长度
+		b.writeByte(msgType);//显示消息类型
+		b.writeBytes(msgBytes);//显示信息
+		b.writeByte(pmCount);//总共支付列表的长度
+		for(PayMethod pm: pmList){
+			b.writeByte(pm.getPayMethodCode());
+			b.writeBytes(Utils.convertGB(pm.getPayMethodName(),20).getBytes(Charset.forName("GB2312")));
+		}
+		return b;
 	}
 	
 	/**
