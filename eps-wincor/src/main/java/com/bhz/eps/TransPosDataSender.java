@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,13 +25,20 @@ import com.bhz.eps.codec.TPDUDecoder;
 import com.bhz.eps.codec.TPDUEncoder;
 import com.bhz.eps.entity.AuthcodeToOpenidReqData;
 import com.bhz.eps.entity.AuthcodeToOpenidResData;
+import com.bhz.eps.entity.MemberPayRequest;
 import com.bhz.eps.entity.Order;
 import com.bhz.eps.entity.PayMethod;
 import com.bhz.eps.entity.SaleItemEntity;
+import com.bhz.eps.entity.MemberPayRequest.ExpandFlow;
+import com.bhz.eps.entity.MemberPayRequest.ReqBody;
+import com.bhz.eps.pay.MemberPay;
 import com.bhz.eps.pdu.transpos.TPDU;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.impl.AuthcodeToOpenidServiceImpl;
 import com.bhz.eps.util.Converts;
+import com.bhz.eps.util.DateUtil;
+import com.bhz.eps.util.FormatedJsonHierarchicalStreamDriver;
+import com.bhz.eps.util.HMacUtil;
 import com.bhz.eps.util.Utils;
 import com.bhz.fcomc.service.PreferentialPriceService;
 import com.bhz.posserver.entity.request.PreferentialPriceDetailsRequest;
@@ -41,6 +49,7 @@ import com.tencent.WXPay;
 import com.tencent.business.ScanPayBusiness.ResultListener;
 import com.tencent.protocol.pay_protocol.ScanPayReqData;
 import com.tencent.protocol.pay_protocol.ScanPayResData;
+import com.thoughtworks.xstream.XStream;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -432,7 +441,63 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                         break;
                 }
             }else if(type==3){//如果是储值会员
-            	
+            	MemberPay mp = new MemberPay();
+        		MemberPayRequest pay = new MemberPayRequest();
+        		pay.setTxCode("3103");
+        		pay.setTxDate(DateUtil.format(new Date(), DateUtil.DateEnum.webservice_date));
+        		pay.setMerchantNo("1000");
+        		pay.setReqSeqNo(order.getOrderId());
+        		pay.setTxTime(DateUtil.format(new Date(), DateUtil.DateEnum.webservice_timeWithMilli));
+        		pay.setBrchNo(order.getMerchantId());
+        		pay.setBrchName(order.getMerchantName());
+        		pay.setTellerNo(order.getClerkId());
+        		pay.setTellerName(order.getClerkId());
+        		
+        		ReqBody body = new ReqBody();
+        		body.setCardNo(code);
+        		body.setOrgID(order.getMerchantId());
+        		body.setFillingTime(DateUtil.format(new Date(), DateUtil.DateEnum.webservice_time));
+        		body.setDeductionType("20");
+        		body.setTotalAmount(order.getPaymentAmount().toString());
+        		body.setNumberOfDetail(Integer.toString(order.getOrderItems().size()));
+        		
+        		
+        		List<ExpandFlow> eflist = new ArrayList<ExpandFlow>();
+        		Set<SaleItemEntity> orderItemList = order.getOrderItems();
+        		int counter = 1;
+        		for(SaleItemEntity sie:orderItemList){
+        			ExpandFlow ef = new ExpandFlow();
+            		ef.setLimitOilNo(sie.getProductCode());
+            		ef.setOilPrices(sie.getUnitPrice().toString());
+            		ef.setRefueling(sie.getQuantity().toString());
+            		ef.setAmount(sie.getAmount().toString());
+            		ef.setICCardBalance("0");
+            		ef.setListNo(Integer.toString(counter));
+            		ef.setPriceNoDiscount(sie.getAmount().toString());
+            		ef.setAmountNoDiscount(sie.getAmount().toString());
+            		ef.setPlatesNumber("");
+            		ef.setShift(order.getShiftNumber());
+            		eflist.add(ef);
+            		counter++;
+        		}
+        		
+        		
+        		body.setExpandFlowList(eflist);
+        		String macStr = pay.getTxCode() + pay.getTxTime() + pay.getReqBody().getCardNo() + 
+        				pay.getReqBody().getOrgID() + pay.getReqBody().getFillingTime() + 
+        				pay.getReqBody().getDeductionType() + pay.getReqBody().getTotalAmount() +
+        				pay.getReqBody().getNumberOfDetail();
+        		String key = Utils.systemConfiguration.getProperty("ws.trans.key");
+        		pay.setTxMac(HMacUtil.encryptHMAC(macStr, key));
+        		pay.setReqBody(body);
+        		
+        		XStream x = new XStream(new FormatedJsonHierarchicalStreamDriver());
+        		x.autodetectAnnotations(true);
+        		x.setMode(XStream.NO_REFERENCES);
+        		
+        		String reqInfo = x.toXML(pay);
+        		logger.info("【会员消费请求消息】：" + reqInfo);
+        		mp.sendPayJsonInfo(reqInfo);
             }
         } catch(Exception e) {
             logger.error("", e);
