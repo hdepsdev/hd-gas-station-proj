@@ -129,7 +129,7 @@ public class MemberPay {
 		
 	}
 	
-	public static void sendPayJsonInfo(final String req,String orderId){
+	public static void sendPayJsonInfo(final String req,final Order order){
 		Bootstrap b = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		b.group(worker).option(ChannelOption.TCP_NODELAY, true)
@@ -141,7 +141,7 @@ public class MemberPay {
 			protected void initChannel(SocketChannel ch) throws Exception {
 				ch.pipeline().addLast(new HttpResponseDecoder());
 				ch.pipeline().addLast(new HttpRequestEncoder());
-				ch.pipeline().addLast(new MemberPayInfoHandler(orderId));
+				ch.pipeline().addLast(new MemberPayInfoHandler(order));
 			}
 			
 		});
@@ -365,7 +365,7 @@ public class MemberPay {
 	        		String reqInfo = x.toXML(pay);
 	        		logger.info("【会员消费请求消息】：" + reqInfo);
 	        		
-	        		sendPayJsonInfo(reqInfo,order.getOrderId());
+	        		sendPayJsonInfo(reqInfo,order);
 	            }
 	            
 	        }
@@ -386,11 +386,11 @@ public class MemberPay {
 	}
 	
 	public static class MemberPayInfoHandler extends ChannelHandlerAdapter{
+
+        Order order;
 		
-		String orderId;
-		
-		public MemberPayInfoHandler(String orderId) {
-			this.orderId = orderId;
+		public MemberPayInfoHandler(Order order) {
+			this.order = order;
 		}
 
 		@Override
@@ -404,12 +404,10 @@ public class MemberPay {
 	            ByteBuf buf = content.content();
 	            System.out.println(buf.toString(io.netty.util.CharsetUtil.UTF_8));
 	            buf.release();
-	            
-	            Order updateOrder = new Order();
-	    		updateOrder.setOrderId(orderId);
-	    		updateOrder.setStatus(Order.STATUS_SUCCESS);
+
+                order.setStatus(Order.STATUS_SUCCESS);
 	    		OrderService os = (OrderService) EPSServer.appctx.getBean("orderService");
-	    		os.updateByPrimaryKeySelective(updateOrder);
+	    		os.updateByPrimaryKeySelective(order);
 	        }
 		}
 
