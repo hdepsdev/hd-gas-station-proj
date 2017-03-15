@@ -299,6 +299,9 @@ public class MemberPay {
 	            HttpContent content = (HttpContent)msg;
 	            ByteBuf buf = content.content();
 	            String result = buf.toString(io.netty.util.CharsetUtil.UTF_8);
+	            if(result==null || result.trim().equals("")){
+	            	return;
+	            }
 	            System.out.println(result);
 	            buf.release();
 	            
@@ -371,6 +374,18 @@ public class MemberPay {
 	        }
 		}
 
+		@Override
+		public void channelReadComplete(ChannelHandlerContext ctx) {
+			ctx.channel().closeFuture().addListener(new ChannelFutureListener(){
+
+				@Override
+				public void operationComplete(ChannelFuture future) throws Exception {
+					logger.info("支付完成");
+				}
+				
+			});
+		}
+		
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 			// TODO Auto-generated method stub
