@@ -508,6 +508,31 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	 * 计算优惠
 	 */
 	private void discount(int type, String code) {
+        String cardNo = "99000211111200001000";//所有非会员消费卡号
+        try {
+            // 获取用户信息
+            if (type == 1) {// 只有微信支付可以获取用户数据
+                AuthcodeToOpenidServiceImpl atoser = new AuthcodeToOpenidServiceImpl();
+                AuthcodeToOpenidResData result = atoser.request(new AuthcodeToOpenidReqData(code));
+                if ("SUCCESS".equals(result.getReturn_code()) && "SUCCESS".equals(result.getResult_code())) {
+                    String openId = result.getOpenid();
+                    // TODO 通过openid获取卡号，再根据卡号进行优惠查询和积分
+                    //cardNo =
+                    logger.debug("-----------------openid:" + openId + "----------------");
+                } else {
+                    logger.error("获取openid失败！");
+                    payFail();
+                }
+            } else if (type == 2) {// 支付宝用户按非会员消费
+
+            } else if (type == 3) {// 会员消费时，code就是卡号
+                cardNo = code;
+            }
+        } catch (Exception e) {
+            payFail();
+            logger.error("", e);
+        }
+
         PreferentialPriceService ps = (PreferentialPriceService) EPSServer.appctx.getBean("preferentialPriceService", PreferentialPriceService.class);
         //优惠查询请求对象
         PreferentialPriceRequest pps = new PreferentialPriceRequest();
@@ -516,7 +541,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         //卡类型
         pps.setCardType("I");
         //卡号
-        pps.setCardNo("99000211111200001000");
+        pps.setCardNo(cardNo);
         //版本号 固定1
         pps.setDbVersion(1);
         //优惠查询请求明细集合
@@ -557,25 +582,8 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         } else if (ppr.getDiscountType() == 2) {
             logger.debug("客户已设置为无优惠");
         }
-        
-		try {
-			// 获取用户信息
-			if (type == 1) {// 只有微信支付可以获取用户数据
-				AuthcodeToOpenidServiceImpl atoser = new AuthcodeToOpenidServiceImpl();
-				AuthcodeToOpenidResData result = atoser.request(new AuthcodeToOpenidReqData(code));
-				if ("SUCCESS".equals(result.getReturn_code()) && "SUCCESS".equals(result.getResult_code())) {
-					String openId = result.getOpenid();
-					// TODO 通过openid获取用户信息
-					logger.debug("-----------------openid:" + openId + "----------------");
-				} else {
-					logger.error("获取openid失败！");
-					payFail();
-				}
-			}
-		} catch (Exception e) {
-			payFail();
-			logger.error("", e);
-		}
+
+        // TODO 根据卡号进行积分
 	}
 	
 	/**
