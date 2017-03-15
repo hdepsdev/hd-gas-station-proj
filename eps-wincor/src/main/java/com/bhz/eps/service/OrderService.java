@@ -8,4 +8,5 @@ public interface OrderService {
 	public Order getOrderbyId(String orderId);
 	public Order getOrderWithSaleItemsById(String orderId);
     public int updateOrder(Order order);
+    public int updateByPrimaryKeySelective(Order record);
 }

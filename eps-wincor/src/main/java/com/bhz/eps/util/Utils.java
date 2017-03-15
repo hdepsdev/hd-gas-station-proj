@@ -27,6 +27,7 @@ public class Utils {
 	static {
 		PAY_METHOD_LIST.add(new PayMethod(1,"微信支付"));
 		PAY_METHOD_LIST.add(new PayMethod(2, "支付宝支付"));
+		PAY_METHOD_LIST.add(new PayMethod(3, "会员支付"));
 		try {
 			systemConfiguration.load(Utils.class.getClassLoader().getResourceAsStream("conf/sys.conf"));
 

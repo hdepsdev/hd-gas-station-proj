@@ -441,63 +441,11 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                         break;
                 }
             }else if(type==3){//如果是储值会员
+            	
+            	
+            	
             	MemberPay mp = new MemberPay();
-        		MemberPayRequest pay = new MemberPayRequest();
-        		pay.setTxCode("3103");
-        		pay.setTxDate(DateUtil.format(new Date(), DateUtil.DateEnum.webservice_date));
-        		pay.setMerchantNo("1000");
-        		pay.setReqSeqNo(order.getOrderId());
-        		pay.setTxTime(DateUtil.format(new Date(), DateUtil.DateEnum.webservice_timeWithMilli));
-        		pay.setBrchNo(order.getMerchantId());
-        		pay.setBrchName(order.getMerchantName());
-        		pay.setTellerNo(order.getClerkId());
-        		pay.setTellerName(order.getClerkId());
-        		
-        		ReqBody body = new ReqBody();
-        		body.setCardNo(code);
-        		body.setOrgID(order.getMerchantId());
-        		body.setFillingTime(DateUtil.format(new Date(), DateUtil.DateEnum.webservice_time));
-        		body.setDeductionType("20");
-        		body.setTotalAmount(order.getPaymentAmount().toString());
-        		body.setNumberOfDetail(Integer.toString(order.getOrderItems().size()));
-        		
-        		
-        		List<ExpandFlow> eflist = new ArrayList<ExpandFlow>();
-        		Set<SaleItemEntity> orderItemList = order.getOrderItems();
-        		int counter = 1;
-        		for(SaleItemEntity sie:orderItemList){
-        			ExpandFlow ef = new ExpandFlow();
-            		ef.setLimitOilNo(sie.getProductCode());
-            		ef.setOilPrices(sie.getUnitPrice().toString());
-            		ef.setRefueling(sie.getQuantity().toString());
-            		ef.setAmount(sie.getAmount().toString());
-            		ef.setICCardBalance("0");
-            		ef.setListNo(Integer.toString(counter));
-            		ef.setPriceNoDiscount(sie.getAmount().toString());
-            		ef.setAmountNoDiscount(sie.getAmount().toString());
-            		ef.setPlatesNumber("");
-            		ef.setShift(order.getShiftNumber());
-            		eflist.add(ef);
-            		counter++;
-        		}
-        		
-        		
-        		body.setExpandFlowList(eflist);
-        		String macStr = pay.getTxCode() + pay.getTxTime() + pay.getReqBody().getCardNo() + 
-        				pay.getReqBody().getOrgID() + pay.getReqBody().getFillingTime() + 
-        				pay.getReqBody().getDeductionType() + pay.getReqBody().getTotalAmount() +
-        				pay.getReqBody().getNumberOfDetail();
-        		String key = Utils.systemConfiguration.getProperty("ws.trans.key");
-        		pay.setTxMac(HMacUtil.encryptHMAC(macStr, key));
-        		pay.setReqBody(body);
-        		
-        		XStream x = new XStream(new FormatedJsonHierarchicalStreamDriver());
-        		x.autodetectAnnotations(true);
-        		x.setMode(XStream.NO_REFERENCES);
-        		
-        		String reqInfo = x.toXML(pay);
-        		logger.info("【会员消费请求消息】：" + reqInfo);
-        		mp.sendPayJsonInfo(reqInfo);
+            	mp.requestPassword(code,order);
             }
         } catch(Exception e) {
             logger.error("", e);
@@ -588,15 +536,22 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         }
         pps.setDetails(details);
         PreferentialPriceResponse ppr = ps.queryPreferentialPrice(Long.valueOf(Utils.systemConfiguration.getProperty("eps.server.merchant.id")), pps);
-        BigDecimal total = new BigDecimal(0);
-        for (PreferentialPriceDetailsResponse ppdr : ppr.getDetails()) {
-            total = total.add(ppdr.getAmountWithDiscount());
+        if(ppr.getDetails()==null || ppr.getDetails().isEmpty()){
+        	order.setPaymentAmount(order.getOriginalAmount());
+        	order.setCouponAmount(new BigDecimal(0));
+        }else{
+        	BigDecimal total = new BigDecimal(0);
+            for (PreferentialPriceDetailsResponse ppdr : ppr.getDetails()) {
+                total = total.add(ppdr.getAmountWithDiscount());
+            }
+            
+            order.setPaymentAmount(total);
+            order.setCouponAmount(order.getOriginalAmount().subtract(total));
         }
-        order.setPaymentAmount(total);
-        order.setCouponAmount(order.getOriginalAmount().subtract(total));
+        
         //discountType 优惠类型 0:不满足优惠条件 1:有优惠 2:无优惠
         if (ppr.getDiscountType() == 1) {
-            logger.debug("客户享受刷卡优惠,折后金额:" + total);
+            logger.debug("客户享受刷卡优惠,折后金额:" + order.getPaymentAmount());
         } else if (ppr.getDiscountType() == 0) {
             logger.debug("客户不满足优惠条件");
         } else if (ppr.getDiscountType() == 2) {
@@ -766,7 +721,6 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<TPDU>{
 	
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		char padding = 0x20;
 		byte[] stationId = Converts.str2Bcd(order.getMerchantId());
 		int casherId = Integer.parseInt(order.getGenerator().split("\\|")[1]);
 		byte[] casherNo = Converts.int2U16(casherId);
