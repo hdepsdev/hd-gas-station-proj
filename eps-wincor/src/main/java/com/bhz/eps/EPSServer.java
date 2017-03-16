@@ -71,7 +71,7 @@ public class EPSServer {
 
 				@Override
 				public void operationComplete(ChannelFuture future) throws Exception {
-					logger.info("Server is started and listening on port " + Utils.systemConfiguration.getProperty("eps.server.port"));
+					logger.info("EPS Server is started and listening on port " + Utils.systemConfiguration.getProperty("eps.server.port"));
 				}
 				
 			});
@@ -87,9 +87,16 @@ public class EPSServer {
 		if(Utils.systemConfiguration.getProperty("eps.server.data.upload.need").equalsIgnoreCase("true")){
 			startEPSDataUploader();
 		}
-		startConfigureManager();
-		EPSServer b = new EPSServer();
-		b.start();
+		//startConfigureManager();
+		if (Utils.systemConfiguration.getProperty("start.data.center").equalsIgnoreCase("true")) {
+			DataCenter dc = new DataCenter();
+			dc.start();
+		}
+		else
+		{
+			EPSServer b = new EPSServer();
+			b.start();
+		}
 	}
 	
 	private static void startEPSDataUploader(){

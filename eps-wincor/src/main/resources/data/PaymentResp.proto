@@ -3,12 +3,9 @@ option java_outer_classname="PaymentRespProto";
 option optimize_for=LITE_RUNTIME;
 
 message PaymentResp{
-	required string stationCode = 1;
-	required int32 nozzleNumber = 2;
-	required string workOrder = 3;
-	message Result{
-		required string resultCode = 1;
-		optional string errorCause = 2;
-	}
-	required Result result = 4;
+	optional string stationCode = 1;	//”Õ’æ±‡∫≈
+	optional int32 nozzleNumber = 2;	//”Õ«π±‡∫≈
+	optional string workOrder = 3;		//∂©µ•±‡∫≈
+	optional int32 paymentState = 4;	//÷ß∏∂◊¥Ã¨
+	optional string msg = 5;			//∏Ωº”–≈œ¢
 }

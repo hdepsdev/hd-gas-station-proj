@@ -3,12 +3,42 @@ option java_outer_classname="PaymentReqProto";
 option optimize_for=LITE_RUNTIME;
 
 message PaymentReq{
-	required string stationCode = 1;
-	required int32 nozzleNumber = 2;
-	required string workOrder = 3;
-	required int32 paymentMethod = 4;
-	required int32 preferentialMethod = 5;
-	required string points = 6;
-	required string receivables = 7;
-	required string proceeds = 8;
+	optional Seller seller = 1;						//销售油站信息
+	optional bytes token = 2;						//会话token
+	optional string workOrder = 3;					//订单编号，对应微信和支付宝的商户内部订单编号
+	optional int32 methodOfPayment = 4;				//订单支付方法
+	optional PaymentAmount paymentAmount = 5;		//订单支付金额
+	optional string title = 6;						//订单标题，对应支付宝的subject
+	optional string body = 7;						//订单描述
+	optional OrderTime orderTime = 8;				//订单时间 
+	repeated Goods GoodsDetail = 9;					//商品列表
+	optional string goodsTag = 10;					//商品tag值
+	optional string authCode = 11;					//订单支付授权码，对应微信支付授权码和支付宝的付款条码
+	optional string attach = 12;					//备注信息，对应微信的附加数据
+}
+
+message Seller{
+	optional string providerId = 1;			//商品提供商，对应支付宝的providerId
+	optional string stationId = 2;			//油站编号，对应支付宝的storeId
+	optional string nozzleNumber = 3;		//油枪编号，对应支付宝的operatorId和微信的deviceInfo
+	optional string sellerId = 4;			//收单账号，对应支付宝的sellerId
+}
+
+message PaymentAmount{
+	optional double totalAmount = 1;		//待支付金额，对应支付宝的TotalAmount和微信的TotalFee
+	optional double discountableAmount = 2;	//参与打折的金额，对应支付宝的discountableAmount
+	optional double undiscountableAmount = 3;//不参与打折的金额，对应支付宝的undiscountableAmount
+}
+
+message OrderTime{
+	optional string timeStart = 1;			//订单生成时间，对应微信timeStart
+	optional string timeExpire = 2;			//订单失效时间，对应微信timeExpire
+	optional string timeoutExpress = 3;		//订单有效期，对应支付宝timeoutExpress
+}
+
+message Goods{
+	optional string goodsId = 1;			//商品ID
+	optional string goodsName = 2;			//商品名称
+	optional long price = 3;				//商品单价
+	optional int quantity = 4;				//商品数量
 }

@@ -114,12 +114,12 @@ class EPSClientHandler extends SimpleChannelInboundHandler<PaymentRespProto.Paym
 	}
 	@Override
 	protected void messageReceived(ChannelHandlerContext ctx, PaymentResp msg) throws Exception {
-		if(msg.getResult().getResultCode().equals("1")){
+/*		if(msg.getResult().getResultCode().equals("1")){
 			//Do upload
 			logger.debug("Processed work order [ " + msg.getWorkOrder() + " ] ");
 		}else{
 			logger.error(msg.getResult().getErrorCause());
-		}
+		}*/
 	}
 	
 	@Override
