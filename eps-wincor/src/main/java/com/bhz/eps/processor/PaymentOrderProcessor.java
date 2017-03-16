@@ -21,6 +21,8 @@ import com.bhz.eps.entity.Order;
 import com.bhz.eps.entity.SaleItemEntity;
 import com.bhz.eps.msg.PaymentReqProto;
 import com.bhz.eps.msg.PaymentRespProto;
+import com.bhz.eps.pay.MemberPay;
+import com.bhz.eps.pay.MemberPayCallbackInterface;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.impl.OrderServiceImpl;
 import com.tencent.WXPay;
@@ -219,10 +221,52 @@ public class PaymentOrderProcessor extends BizProcessor{
 	                	payFail(reqmsg, 99, "不支持的交易状态，交易返回异常!!!");
 	                    break;
 	            }
-	        }
+	        }else if(type==3){//如果是储值会员
+            	MemberPay mp = new MemberPay(new MemberPayCallbackInterface() {
+                    @Override
+                    public void success() {
+                        paySuccess(reqmsg);
+                    }
+
+                    @Override
+                    public void fail(String msg, Throwable e) {
+                        payFail(reqmsg, -1, msg);
+                    }
+                });
+            	//组织订单对象            	
+            	mp.requestPassword(reqmsg.getAuthCode(),transPaymentReqProtoToOrder(reqmsg));
+            }
 	    } catch(Exception e) {
 	        logger.error("", e);
 	    }
+	}
+	
+	private Order transPaymentReqProtoToOrder(PaymentReqProto.PaymentReq req){
+		Order order = new Order();
+		//销售信息
+		order.setMerchantName(req.getSeller().getProviderId());
+		order.setMerchantId(req.getSeller().getStationId());
+		order.setGenerator(req.getSeller().getNozzleNumber());
+		order.setClerkId(req.getSeller().getSellerId());
+		//订单金额
+		order.setOriginalAmount(new BigDecimal(req.getPaymentAmount().getTotalAmount()));
+		//订单时间
+		order.setOrderId(req.getWorkOrder());
+		order.setOrderTime(Integer.parseUnsignedInt(req.getOrderTime().getTimeStart().replaceAll("-", "")));
+		order.setStatus(0);
+		//订单详情
+		Set<SaleItemEntity> items = new HashSet<SaleItemEntity>();
+		for(PaymentReqProto.Goods goods : req.getGoodsDetailList())
+		{
+			SaleItemEntity item = new SaleItemEntity();
+			item.setId(goods.getGoodsId());
+			item.setItemName(goods.getGoodsName());
+			item.setUnitPrice(new BigDecimal(goods.getPrice()));
+			item.setQuantity(new BigDecimal(goods.getQuantity()));
+			items.add(item);
+		}
+		order.setOrderItems(items);
+		return order;
 	}
 	
 	/**
@@ -238,33 +282,9 @@ public class PaymentOrderProcessor extends BizProcessor{
 			respBuilder.setMsg("");
 			//将信息返回客户端
 			channel.writeAndFlush(respBuilder);
-			//支付成功，返回支付成功信息
-			Order order = new Order();
-			//销售信息
-			order.setMerchantName(req.getSeller().getProviderId());
-			order.setMerchantId(req.getSeller().getStationId());
-			order.setGenerator(req.getSeller().getNozzleNumber());
-			order.setClerkId(req.getSeller().getSellerId());
-			//订单金额
-			order.setOriginalAmount(new BigDecimal(req.getPaymentAmount().getTotalAmount()));
-			//订单时间
-			order.setOrderId(req.getWorkOrder());
-			order.setOrderTime(Integer.parseUnsignedInt(req.getOrderTime().getTimeStart().replaceAll("-", "")));
-			order.setStatus(0);
-			//订单详情
-			Set<SaleItemEntity> items = new HashSet<SaleItemEntity>();
-			for(PaymentReqProto.Goods goods : req.getGoodsDetailList())
-			{
-				SaleItemEntity item = new SaleItemEntity();
-				item.setId(goods.getGoodsId());
-				item.setItemName(goods.getGoodsName());
-				item.setUnitPrice(new BigDecimal(goods.getPrice()));
-				item.setQuantity(new BigDecimal(goods.getQuantity()));
-				items.add(item);
-			}
-			order.setOrderItems(items);
+			//支付成功，返回支付成功信息			
 			OrderService orderService = new OrderServiceImpl();
-			orderService.addOrder(order);
+			orderService.addOrder(transPaymentReqProtoToOrder(req));
 		} catch (Exception e) {
 			logger.error("", e);
 		}
