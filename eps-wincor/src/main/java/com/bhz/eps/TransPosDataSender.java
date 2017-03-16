@@ -11,6 +11,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
+import com.bhz.eps.pay.MemberPayCallbackInterface;
+import com.bhz.point.calc.entity.OilSale;
+import com.bhz.point.calc.service.PolicyRuleService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -220,6 +223,7 @@ public class TransPosDataSender {
 
 class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
+    private static final String CARD_NO_DEF = "99000211111200001000";//所有非会员消费卡号
     // 支付宝当面付2.0服务
     private static AlipayTradeService tradeService;
     {
@@ -237,6 +241,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
     
 	List<PayMethod> pmList;
 	Order order;
+    String cardNo = CARD_NO_DEF;
 	
 	public SelectPayMethodHandler(List<PayMethod> pmList,Order order) {
 		this.pmList = pmList;
@@ -441,10 +446,17 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                         break;
                 }
             }else if(type==3){//如果是储值会员
-            	
-            	
-            	
-            	MemberPay mp = new MemberPay();
+            	MemberPay mp = new MemberPay(new MemberPayCallbackInterface() {
+                    @Override
+                    public void success() {
+                        paySuccess();
+                    }
+
+                    @Override
+                    public void fail(String msg, Throwable e) {
+                        payFail();
+                    }
+                });
             	mp.requestPassword(code,order);
             }
         } catch(Exception e) {
@@ -508,7 +520,6 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	 * 计算优惠
 	 */
 	private void discount(int type, String code) {
-        String cardNo = "99000211111200001000";//所有非会员消费卡号
         try {
             // 获取用户信息
             if (type == 1) {// 只有微信支付可以获取用户数据
@@ -546,6 +557,8 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         pps.setDbVersion(1);
         //优惠查询请求明细集合
         List<PreferentialPriceDetailsRequest> details = new ArrayList<PreferentialPriceDetailsRequest>();
+        //积分
+        int point = 0;
         for (SaleItemEntity entity : order.getOrderItems()) {
             //优惠查询请求明细
             PreferentialPriceDetailsRequest ppdr = new PreferentialPriceDetailsRequest();
@@ -558,7 +571,24 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             //油品号
             ppdr.setOilCode(entity.getProductCode());
             details.add(ppdr);
+
+            //根据卡号进行积分
+            PolicyRuleService policyRuleService = (PolicyRuleService)EPSServer.appctx.getBean("policyRuleService", PolicyRuleService.class);
+            OilSale oilSale = new OilSale();
+            oilSale.setCardId(cardNo);
+            oilSale.setOrgId("1111111111");
+            oilSale.setAmount(entity.getAmount().doubleValue());
+            oilSale.setOilPrices(entity.getUnitPrice().doubleValue());
+            oilSale.setRefueling(entity.getQuantity().doubleValue());
+            oilSale.setOilId(entity.getProductCode());
+            oilSale.setFillingTime(new Date());
+            try {
+                point += policyRuleService.preCalcPoint(oilSale);
+            } catch (Exception e) {
+                logger.error("积分异常", e);
+            }
         }
+        order.setLoyaltyPoint(new BigDecimal(point));
         pps.setDetails(details);
         PreferentialPriceResponse ppr = ps.queryPreferentialPrice(Long.valueOf(Utils.systemConfiguration.getProperty("eps.server.merchant.id")), pps);
         if(ppr.getDetails()==null || ppr.getDetails().isEmpty()){
@@ -582,19 +612,32 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         } else if (ppr.getDiscountType() == 2) {
             logger.debug("客户已设置为无优惠");
         }
-
-        // TODO 根据卡号进行积分
 	}
 	
 	/**
 	 * 支付成功后调用
 	 */
-	private void paySuccess() {
+	public void paySuccess() {
 		try {
 			order.setStatus(Order.STATUS_SUCCESS);// 设置订单状态为交易成功
-			orderService.updateOrder(order);
-			
-			// TODO 计算积分，由于目前消费时无用户信息，所以暂时无法实现
+			orderService.updateByPrimaryKeySelective(order);
+
+            //保存积分
+            if (cardNo != null && !cardNo.trim().equals("") && !cardNo.trim().equals(CARD_NO_DEF)) {
+                for (SaleItemEntity entity : order.getOrderItems()) {
+                    //根据卡号进行积分
+                    PolicyRuleService policyRuleService = (PolicyRuleService) EPSServer.appctx.getBean("policyRuleService", PolicyRuleService.class);
+                    OilSale oilSale = new OilSale();
+                    oilSale.setCardId(cardNo);
+                    oilSale.setOrgId("1111111111");
+                    oilSale.setAmount(entity.getAmount().doubleValue());
+                    oilSale.setOilPrices(entity.getUnitPrice().doubleValue());
+                    oilSale.setRefueling(entity.getQuantity().doubleValue());
+                    oilSale.setOilId(entity.getProductCode());
+                    oilSale.setFillingTime(new Date());
+                    policyRuleService.preCalcPoint(oilSale);
+                }
+            }
 		} catch (Exception e) {
 			logger.error("", e);
 		}
@@ -603,12 +646,12 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	/**
 	 * 支付失败后调用
 	 */
-	private void payFail() {
+	public void payFail() {
 		try {
 			int status = order.getStatus();
 			if (status == Order.STATUS_WAIT) {// 只有待支付状态的订单才能改变状态
 				order.setStatus(Order.STATUS_ERROR);// 设置订单状态为交易失败
-				orderService.updateOrder(order);
+				orderService.updateByPrimaryKeySelective(order);
 			}
 		} catch (Exception e) {
 			logger.error("", e);

@@ -63,8 +63,11 @@ public class MemberPay {
 	private final static String MEMBER_PAY_HOST;
 	private final static int MEMBER_PAY_PORT;
 	private final static String PAY_PASS_URL;
-	
-	public MemberPay(){
+
+    private MemberPayCallbackInterface callback;
+
+	public MemberPay(MemberPayCallbackInterface callback){
+        this.callback = callback;
 	}
 	
 	static {
@@ -114,7 +117,7 @@ public class MemberPay {
 		}
 	}
 	
-	public static class ReqPayPasswd implements Runnable{
+	public class ReqPayPasswd implements Runnable{
 		String cardNo;
 		Order order;
 		public ReqPayPasswd(String cardNo,Order order){
@@ -123,13 +126,13 @@ public class MemberPay {
 		}
 		@Override
 		public void run() {
-			MemberPay mp = new MemberPay();
+			MemberPay mp = new MemberPay(callback);
 			mp.requestPassword(cardNo, order);
 		}
 		
 	}
 	
-	public static void sendPayJsonInfo(final String req,final Order order){
+	public void sendPayJsonInfo(final String req,final Order order){
 		Bootstrap b = new Bootstrap();
 		EventLoopGroup worker = new NioEventLoopGroup();
 		b.group(worker).option(ChannelOption.TCP_NODELAY, true)
@@ -174,7 +177,7 @@ public class MemberPay {
 		
 	}
 	
-	public static class MemberPayPasswdHandler extends ChannelHandlerAdapter{
+	public class MemberPayPasswdHandler extends ChannelHandlerAdapter{
 		String cardNo;
 		Order order;
 		public MemberPayPasswdHandler(String cardNo,Order order){
@@ -201,7 +204,7 @@ public class MemberPay {
 		}
 	}
 	
-	public static class ValidatePayPass implements Runnable{
+	public class ValidatePayPass implements Runnable{
 		
 		private String cardNo;
 		private String password;
@@ -280,10 +283,10 @@ public class MemberPay {
 		
 	}
 	
-	public static class ValidatePasswordHandler extends ChannelHandlerAdapter{
+	public class ValidatePasswordHandler extends ChannelHandlerAdapter{
 		Order order;
 		String cardNo;
-		private static final Logger logger = LogManager.getLogger(ValidatePasswordHandler.class);
+		private final Logger logger = LogManager.getLogger(ValidatePasswordHandler.class);
 		
 		public ValidatePasswordHandler(String cardNo, Order order){
 			this.order = order;
@@ -390,6 +393,9 @@ public class MemberPay {
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 			// TODO Auto-generated method stub
 			super.exceptionCaught(ctx, cause);
+            ExecutorService es = Executors.newFixedThreadPool(1);
+            es.execute(new ReqPayPasswd(this.cardNo,this.order));
+            es.shutdown();
 		}
 	}
 	
@@ -400,7 +406,7 @@ public class MemberPay {
 	    return map;
 	}
 	
-	public static class MemberPayInfoHandler extends ChannelHandlerAdapter{
+	public class MemberPayInfoHandler extends ChannelHandlerAdapter{
 
         Order order;
 		
@@ -417,12 +423,20 @@ public class MemberPay {
 	        if(msg instanceof HttpContent){
 	            HttpContent content = (HttpContent)msg;
 	            ByteBuf buf = content.content();
-	            System.out.println(buf.toString(io.netty.util.CharsetUtil.UTF_8));
-	            buf.release();
+                String result = buf.toString(io.netty.util.CharsetUtil.UTF_8);
+                if(result==null || result.trim().equals("")){
+                    return;
+                }
+                System.out.println(result);
+                buf.release();
 
-                order.setStatus(Order.STATUS_SUCCESS);
-	    		OrderService os = (OrderService) EPSServer.appctx.getBean("orderService");
-	    		os.updateByPrimaryKeySelective(order);
+                Map<String,String> map = parseJsonData(result);
+                String reCode = map.get("RespCode");
+                if ("00".equals(reCode)) {
+                    callback.success();
+                } else {
+                    callback.fail(map.get("RespErrMsg"), null);
+                }
 	        }
 		}
 
@@ -430,6 +444,7 @@ public class MemberPay {
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 			// TODO Auto-generated method stub
 			super.exceptionCaught(ctx, cause);
+            callback.fail(cause.getMessage(), cause);
 		}
 		
 	}
