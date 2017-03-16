@@ -1,22 +1,5 @@
 package com.bhz.eps;
 
-import java.io.ByteArrayInputStream;
-import java.math.BigDecimal;
-import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
-
-import com.bhz.eps.pay.MemberPayCallbackInterface;
-import com.bhz.point.calc.entity.OilSale;
-import com.bhz.point.calc.service.PolicyRuleService;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.alipay.demo.trade.config.Configs;
 import com.alipay.demo.trade.model.ExtendParams;
 import com.alipay.demo.trade.model.GoodsDetail;
@@ -26,48 +9,52 @@ import com.alipay.demo.trade.service.AlipayTradeService;
 import com.alipay.demo.trade.service.impl.AlipayTradeServiceImpl;
 import com.bhz.eps.codec.TPDUDecoder;
 import com.bhz.eps.codec.TPDUEncoder;
-import com.bhz.eps.entity.AuthcodeToOpenidReqData;
-import com.bhz.eps.entity.AuthcodeToOpenidResData;
-import com.bhz.eps.entity.MemberPayRequest;
-import com.bhz.eps.entity.Order;
-import com.bhz.eps.entity.PayMethod;
-import com.bhz.eps.entity.SaleItemEntity;
-import com.bhz.eps.entity.MemberPayRequest.ExpandFlow;
-import com.bhz.eps.entity.MemberPayRequest.ReqBody;
+import com.bhz.eps.entity.*;
 import com.bhz.eps.pay.MemberPay;
+import com.bhz.eps.pay.MemberPayCallbackInterface;
 import com.bhz.eps.pdu.transpos.TPDU;
 import com.bhz.eps.service.OrderService;
 import com.bhz.eps.service.impl.AuthcodeToOpenidServiceImpl;
 import com.bhz.eps.util.Converts;
-import com.bhz.eps.util.DateUtil;
-import com.bhz.eps.util.FormatedJsonHierarchicalStreamDriver;
-import com.bhz.eps.util.HMacUtil;
 import com.bhz.eps.util.Utils;
 import com.bhz.fcomc.service.PreferentialPriceService;
+import com.bhz.point.calc.entity.OilSale;
+import com.bhz.point.calc.service.PolicyRuleService;
 import com.bhz.posserver.entity.request.PreferentialPriceDetailsRequest;
 import com.bhz.posserver.entity.request.PreferentialPriceRequest;
 import com.bhz.posserver.entity.response.PreferentialPriceDetailsResponse;
 import com.bhz.posserver.entity.response.PreferentialPriceResponse;
+import com.google.gson.Gson;
 import com.tencent.WXPay;
 import com.tencent.business.ScanPayBusiness.ResultListener;
 import com.tencent.protocol.pay_protocol.ScanPayReqData;
 import com.tencent.protocol.pay_protocol.ScanPayResData;
-import com.thoughtworks.xstream.XStream;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.AttributeKey;
+import lombok.Data;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class TransPosDataSender {
 	private static final Logger logger = LogManager.getLogger(TransPosDataSender.class);
@@ -573,7 +560,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             details.add(ppdr);
 
             //根据卡号进行积分
-            PolicyRuleService policyRuleService = (PolicyRuleService)EPSServer.appctx.getBean("policyRuleService", PolicyRuleService.class);
+            PolicyRuleService policyRuleService = (PolicyRuleService)EPSServer.appctx.getBean("pointRuleService", PolicyRuleService.class);
             OilSale oilSale = new OilSale();
             oilSale.setCardId(cardNo);
             oilSale.setOrgId("1111111111");
@@ -612,7 +599,50 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         } else if (ppr.getDiscountType() == 2) {
             logger.debug("客户已设置为无优惠");
         }
+
+        if (cardNo != null && !cardNo.trim().equals("") && !cardNo.trim().equals(CARD_NO_DEF)) {
+            //使用优惠券
+            try {
+                HttpClient client = HttpClients.createDefault();
+                HttpPost post = new HttpPost("URL");
+                List<NameValuePair> param = new ArrayList<NameValuePair>();
+                param.add(new BasicNameValuePair("cardId", cardNo));
+                post.setEntity(new UrlEncodedFormEntity(param));
+                HttpResponse resp = client.execute(post);
+                String result = EntityUtils.toString(resp.getEntity());
+                Gson gson = new Gson();
+                Map json = gson.fromJson(result, Map.class);
+                if ((Boolean) json.get("success")) {
+                    List<Map> list = (List<Map>)json.get("list");
+                    List<Coupon> couponList = new ArrayList<Coupon>();
+                    //TODO 将返回的优惠券数据封装为优惠券对象
+                    //选择优惠券
+                    Coupon coupon = selectCoupon(couponList);
+                    //使用优惠券
+                    if (coupon != null) {
+                        post = new HttpPost("URL");
+                        param = new ArrayList<NameValuePair>();
+                        param.add(new BasicNameValuePair("cardId", cardNo));
+                        param.add(new BasicNameValuePair("couponId", coupon.getId()));
+                        post.setEntity(new UrlEncodedFormEntity(param));
+                        resp = client.execute(post);
+                        result = EntityUtils.toString(resp.getEntity());
+                        json = gson.fromJson(result, Map.class);
+                        if ((Boolean) json.get("success")) {
+                            //TODO 使用成功，改变订单中金额
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                logger.error("使用优惠券异常", e);
+            }
+        }
 	}
+
+    private Coupon selectCoupon(List<Coupon> list) {
+        //TODO 取优惠幅度最大的优惠券
+        return null;
+    }
 	
 	/**
 	 * 支付成功后调用
@@ -626,7 +656,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             if (cardNo != null && !cardNo.trim().equals("") && !cardNo.trim().equals(CARD_NO_DEF)) {
                 for (SaleItemEntity entity : order.getOrderItems()) {
                     //根据卡号进行积分
-                    PolicyRuleService policyRuleService = (PolicyRuleService) EPSServer.appctx.getBean("policyRuleService", PolicyRuleService.class);
+                    PolicyRuleService policyRuleService = (PolicyRuleService) EPSServer.appctx.getBean("pointRuleService", PolicyRuleService.class);
                     OilSale oilSale = new OilSale();
                     oilSale.setCardId(cardNo);
                     oilSale.setOrgId("1111111111");
@@ -657,6 +687,19 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 			logger.error("", e);
 		}
 	}
+}
+
+/**
+ * 优惠券对象
+ */
+@Data
+class Coupon {
+    String id;
+    String consume_type;//消费类型，1油品，2非油品
+    String type;//1满减，2折扣
+    BigDecimal account;//减额或者折扣
+    BigDecimal total;//满额
+    BigDecimal couponAmount;//该优惠券对于本订单可减免的金额（根据订单计算得出）
 }
 
 class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{
