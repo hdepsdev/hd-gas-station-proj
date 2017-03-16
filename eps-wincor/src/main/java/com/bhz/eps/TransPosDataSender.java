@@ -526,8 +526,22 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                 AuthcodeToOpenidResData result = atoser.request(new AuthcodeToOpenidReqData(code));
                 if ("SUCCESS".equals(result.getReturn_code()) && "SUCCESS".equals(result.getResult_code())) {
                     String openId = result.getOpenid();
-                    // TODO 通过openid获取卡号，再根据卡号进行优惠查询和积分
-                    //cardNo =
+                    //通过openid获取卡号，再根据卡号进行优惠查询和积分
+                    HttpClient client = HttpClients.createDefault();
+                    HttpPost post = new HttpPost(Utils.systemConfiguration.getProperty("card.get.url"));
+                    List<NameValuePair> param = new ArrayList<NameValuePair>();
+                    param.add(new BasicNameValuePair("cardId", cardNo));
+                    post.setEntity(new UrlEncodedFormEntity(param));
+                    HttpResponse resp = client.execute(post);
+                    String resultWS = EntityUtils.toString(resp.getEntity());
+                    Gson gson = new Gson();
+                    Map json = gson.fromJson(resultWS, Map.class);
+                    if ((Boolean) json.get("success")) {
+                        cardNo = json.get("cardId").toString();
+                        logger.info(json.get("msg"));
+                    } else {
+                        logger.error(json.get("msg"));
+                    }
                     logger.debug("-----------------openid:" + openId + "----------------");
                 } else {
                     logger.error("获取openid失败！");
@@ -595,8 +609,12 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         	order.setCouponAmount(new BigDecimal(0));
         }else{
         	BigDecimal total = new BigDecimal(0);
-            for (PreferentialPriceDetailsResponse ppdr : ppr.getDetails()) {
+            int i = 0;
+            for (SaleItemEntity entity : order.getOrderItems()) {
+                PreferentialPriceDetailsResponse ppdr = ppr.getDetails().get(i);
                 total = total.add(ppdr.getAmountWithDiscount());
+                entity.setCouponAmount(ppdr.getAmountWithDiscount());
+                i++;
             }
             
             order.setPaymentAmount(total);
@@ -616,7 +634,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             //使用优惠券
             try {
                 HttpClient client = HttpClients.createDefault();
-                HttpPost post = new HttpPost("URL");
+                HttpPost post = new HttpPost(Utils.systemConfiguration.getProperty("coupon.list.url"));
                 List<NameValuePair> param = new ArrayList<NameValuePair>();
                 param.add(new BasicNameValuePair("cardId", cardNo));
                 post.setEntity(new UrlEncodedFormEntity(param));
@@ -627,12 +645,23 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                 if ((Boolean) json.get("success")) {
                     List<Map> list = (List<Map>)json.get("list");
                     List<Coupon> couponList = new ArrayList<Coupon>();
-                    //TODO 将返回的优惠券数据封装为优惠券对象
+                    //将返回的优惠券数据封装为优惠券对象
+                    for (Map map : list) {
+                        Coupon c = new Coupon();
+                        c.setId(map.get("ID").toString());
+                        if (map.get("CONSUME_TYPE") != null) {
+                            c.setConsumeType(map.get("CONSUME_TYPE").toString());
+                        }
+                        c.setType(map.get("TYPE").toString());
+                        c.setAccount(new BigDecimal(map.get("ACCOUNT").toString()));
+                        c.setTotal(new BigDecimal(map.get("TOTAL").toString()));
+                        couponList.add(c);
+                    }
                     //选择优惠券
                     Coupon coupon = selectCoupon(couponList);
                     //使用优惠券
-                    if (coupon != null) {
-                        post = new HttpPost("URL");
+                    if (coupon != null && coupon.getCouponAmount() != null) {
+                        post = new HttpPost(Utils.systemConfiguration.getProperty("coupon.use.url"));
                         param = new ArrayList<NameValuePair>();
                         param.add(new BasicNameValuePair("cardId", cardNo));
                         param.add(new BasicNameValuePair("couponId", coupon.getId()));
@@ -641,9 +670,16 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                         result = EntityUtils.toString(resp.getEntity());
                         json = gson.fromJson(result, Map.class);
                         if ((Boolean) json.get("success")) {
-                            //TODO 使用成功，改变订单中金额
+                            //使用成功，改变订单中金额
+                            order.setPaymentAmount(order.getPaymentAmount().subtract(coupon.getCouponAmount()));
+                            order.setCouponAmount(order.getCouponAmount().add(coupon.getCouponAmount()));
+                            logger.info(json.get("msg"));
+                        } else {
+                            logger.error("使用优惠券异常：" + json.get("msg"));
                         }
                     }
+                } else {
+                    logger.error("使用优惠券异常：" + json.get("msg"));
                 }
             } catch (IOException e) {
                 logger.error("使用优惠券异常", e);
@@ -651,12 +687,62 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         }
 	}
 
+    /**
+     * 选择对本次订单优惠幅度最大的优惠券
+     *
+     * @param list
+     * @return
+     */
     private Coupon selectCoupon(List<Coupon> list) {
-        //TODO 取优惠幅度最大的优惠券
-        return null;
+        for (Coupon coupon : list) {
+            String consumeType = coupon.getConsumeType();
+            //计算适用于该优惠券的总金额
+            BigDecimal total = new BigDecimal(0);
+            for (SaleItemEntity entity : order.getOrderItems()) {
+                if (consumeType == null || consumeType.trim().equals("")) {
+                    //不限
+                    total = total.add(entity.getCouponAmount());
+                } else if ("1".equals(consumeType)) {
+                    //油品
+                    if ("1".equals(entity.getItemCatalog())) {
+                        total = total.add(entity.getCouponAmount());
+                    }
+                } else if ("2".equals(consumeType)) {
+                    //非油品
+                    if (!"1".equals(entity.getItemCatalog())) {
+                        total = total.add(entity.getCouponAmount());
+                    }
+                }
+            }
+            //判断消费类型
+            if ("1".equals(consumeType)) {
+                //满减
+                BigDecimal threshold = coupon.getTotal();
+                if (order.getPaymentAmount().compareTo(threshold) > 0) {
+                    coupon.setCouponAmount(coupon.getAccount());
+                }
+            } else if ("2".equals(consumeType)) {
+                //折扣
+                coupon.setCouponAmount(total.multiply(coupon.getAccount()).setScale(2, BigDecimal.ROUND_HALF_UP));
+            }
+        }
+        Coupon result = null;
+        //选择对本次订单优惠幅度最大的优惠券
+        for (Coupon coupon : list) {
+            if (result == null) {
+                result = coupon;
+                continue;
+            }
+            if (coupon.getCouponAmount() != null
+                    && result.getCouponAmount() != null &&
+                    coupon.getCouponAmount().compareTo(result.getCouponAmount()) > 0) {
+                result = coupon;
+            }
+        }
+        return result;
     }
-	
-	/**
+
+    /**
 	 * 支付成功后调用
 	 */
 	public void paySuccess() {
@@ -707,11 +793,11 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 @Data
 class Coupon {
     String id;
-    String consume_type;//消费类型，1油品，2非油品
-    String type;//1满减，2折扣
+    String consumeType;//消费类型，空为不限，1油品，2非油品
+    String type;//优惠类型，1满减，2折扣
     BigDecimal account;//减额或者折扣
     BigDecimal total;//满额
-    BigDecimal couponAmount;//该优惠券对于本订单可减免的金额（根据订单计算得出）
+    BigDecimal couponAmount = new BigDecimal(0);//该优惠券对于本订单可减免的金额（根据订单计算得出）
 }
 
 class TransPosOrderHandler extends SimpleChannelInboundHandler<TPDU>{

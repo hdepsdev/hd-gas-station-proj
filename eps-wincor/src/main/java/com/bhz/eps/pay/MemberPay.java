@@ -332,10 +332,23 @@ public class MemberPay {
 	        		body.setFillingTime(DateUtil.format(new Date(), DateUtil.DateEnum.webservice_timeWithMilli));
 	        		body.setDeductionType("20");
 	        		body.setTotalAmount(order.getPaymentAmount().toString());
-	        		body.setNumberOfDetail(Integer.toString(order.getOrderItems().size()));
+	        		body.setNumberOfDetail("1");
 	        		
 	        		
 	        		List<ExpandFlow> eflist = new ArrayList<ExpandFlow>();
+                    ExpandFlow ef = new ExpandFlow();
+                    ef.setLimitOilNo("-1");
+                    ef.setOilPrices("0");
+                    ef.setRefueling("0");
+                    ef.setAmount(order.getPaymentAmount().toString());
+                    ef.setICCardBalance("0");
+                    ef.setListNo("1");
+                    ef.setPriceNoDiscount("0");
+                    ef.setAmountNoDiscount(order.getOriginalAmount().toString());
+                    ef.setPlatesNumber("");
+                    ef.setShift(order.getShiftNumber());
+                    eflist.add(ef);
+                    /*
 	        		Set<SaleItemEntity> orderItemList = order.getOrderItems();
 	        		int counter = 1;
 	        		for(SaleItemEntity sie:orderItemList){
@@ -353,6 +366,7 @@ public class MemberPay {
 	            		eflist.add(ef);
 	            		counter++;
 	        		}
+	        		*/
 	        		
 	        		
 	        		body.setExpandFlowList(eflist);

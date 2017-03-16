@@ -54,4 +54,7 @@ public class SaleItemEntity implements java.io.Serializable {
 	@Getter
 	@Setter
 	private String itemCatalog;
+    @Getter
+    @Setter
+    private BigDecimal couponAmount;
 }
