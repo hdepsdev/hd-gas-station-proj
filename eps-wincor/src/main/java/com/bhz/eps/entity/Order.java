@@ -58,6 +58,9 @@ public class Order implements java.io.Serializable{
 	@Getter @Setter
 	private int payType ;
 	
+	@Getter @Setter
+	private String cardNumber;
+	
 	//Virtual Property
 	@Getter @Setter
 	private String itemCode;
