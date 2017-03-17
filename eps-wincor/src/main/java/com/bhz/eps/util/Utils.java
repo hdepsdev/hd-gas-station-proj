@@ -7,7 +7,9 @@ import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -23,11 +25,17 @@ public class Utils {
 	public final static Properties systemConfiguration = new Properties();
 	
 	public final static List<PayMethod> PAY_METHOD_LIST = new ArrayList<PayMethod>();
+	
+	public final static Map<Integer,String> PAY_METHOD_MAP = new HashMap<Integer,String>();
 
 	static {
 		PAY_METHOD_LIST.add(new PayMethod(1,"微信支付"));
 		PAY_METHOD_LIST.add(new PayMethod(2, "支付宝支付"));
 		PAY_METHOD_LIST.add(new PayMethod(3, "会员支付"));
+		
+		PAY_METHOD_MAP.put(1, "微信支付");
+		PAY_METHOD_MAP.put(2, "支付宝支付");
+		PAY_METHOD_MAP.put(3, "会员支付");
 		try {
 			systemConfiguration.load(Utils.class.getClassLoader().getResourceAsStream("conf/sys.conf"));
 

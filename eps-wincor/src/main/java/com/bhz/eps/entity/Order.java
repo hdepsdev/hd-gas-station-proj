@@ -55,6 +55,9 @@ public class Order implements java.io.Serializable{
 	@Getter @Setter
 	private Set<SaleItemEntity> orderItems = new HashSet<SaleItemEntity>();
 	
+	@Getter @Setter
+	private int payType ;
+	
 	//Virtual Property
 	@Getter @Setter
 	private String itemCode;

@@ -246,7 +246,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         		TransPosDataSender tpd = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
                         Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
         		tpd.selectPayMethodToPos(Utils.PAY_METHOD_LIST, order);
-        		ctx.channel().close();
+        		ctx.channel().closeFuture().sync();
         		return;
         	}
         	//解析POS返回数据
@@ -254,6 +254,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         	
         	ByteArrayInputStream reader = new ByteArrayInputStream(bytes);
         	int type = reader.read();//支付类型
+        	order.setPayType(type);
         	byte[] bytes_code = new byte[20];
         	reader.read(bytes_code);
         	String code = new String(bytes_code).trim();//条码
@@ -925,12 +926,14 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<TPDU>{
 		byte[] tmp2 = Utils.concatTwoByteArray(tmp1, cmd);
 		byte[] tmp3 = Utils.concatTwoByteArray(tmp2, tag);
 		
-		ByteBuf b = Unpooled.buffer(69,201);
+		ByteBuf b = Unpooled.buffer();
 		//交易流水号
 		String orderId = order.getOrderId().substring(order.getOrderId().length()-8);
 		b.writeBytes(Converts.str2Bcd(orderId));
 		//交易时间
 		b.writeBytes(Converts.long2U32(order.getOrderTime()));
+		//交易类型
+		b.writeBytes(Utils.convertGB(Utils.PAY_METHOD_MAP.get(order.getPayType()),20).getBytes(Charset.forName("GB2312")));
 		//应收金额
 		b.writeBytes(Converts.long2U32(order.getOriginalAmount().multiply(new BigDecimal(100)).longValue()));
 		//实付金额

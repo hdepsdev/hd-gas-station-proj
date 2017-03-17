@@ -14,6 +14,7 @@
         <result column="coupon_amount" jdbcType="DECIMAL" property="couponAmount" />
         <result column="loyalty_point" jdbcType="BIGINT" property="loyaltyPoint" />
         <result column="status" jdbcType="TINYINT" property="status" />
+        <result column="pay_type" jdbcType="TINYINT" property="payType" />
     </resultMap>
 
     <resultMap type="com.bhz.eps.entity.Order" id="orderWithSaleItemsResult">
@@ -29,12 +30,13 @@
         <result column="coupon_amount" jdbcType="DECIMAL" property="couponAmount" />
         <result column="loyalty_point" jdbcType="BIGINT" property="loyaltyPoint" />
         <result column="status" jdbcType="TINYINT" property="status" />
+        <result column="pay_type" jdbcType="TINYINT" property="payType" />
         <collection property="orderItems" resultMap="com.bhz.eps.dao.SaleItemMapper.orderItemResult"></collection>
     </resultMap>
 
     <sql id="Base_Column_List">
         order_id, merchant_id, merchant_name, generator, order_time, shift_number, clerk_id,
-        original_amount, payment_amount, coupon_amount, loyalty_point, status
+        original_amount, payment_amount, coupon_amount, loyalty_point, status,pay_type
     </sql>
     <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
         select
@@ -55,12 +57,12 @@
         insert into eps_orders (order_id, merchant_id, merchant_name,
         generator, order_time, shift_number,
         clerk_id, original_amount, payment_amount,
-        coupon_amount, loyalty_point, status
+        coupon_amount, loyalty_point, status,pay_type
         )
         values (#{orderId,jdbcType=VARCHAR}, #{merchantId,jdbcType=VARCHAR}, #{merchantName,jdbcType=VARCHAR},
         #{generator,jdbcType=VARCHAR}, #{orderTime,jdbcType=BIGINT}, #{shiftNumber,jdbcType=VARCHAR},
         #{clerkId,jdbcType=VARCHAR}, #{originalAmount,jdbcType=DECIMAL}, #{paymentAmount,jdbcType=DECIMAL},
-        #{couponAmount,jdbcType=DECIMAL}, #{loyaltyPoint,jdbcType=BIGINT}, #{status,jdbcType=TINYINT}
+        #{couponAmount,jdbcType=DECIMAL}, #{loyaltyPoint,jdbcType=BIGINT}, #{status,jdbcType=TINYINT},#{payType,jdbcType=TINYINT}
         )
     </insert>
     <insert id="insertSelective" parameterType="com.bhz.eps.entity.Order">
@@ -102,6 +104,9 @@
             <if test="status != null">
                 status,
             </if>
+            <if test="payType != null">
+                pay_type,
+            </if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="orderId != null">
@@ -139,6 +144,9 @@
             </if>
             <if test="status != null">
                 #{status,jdbcType=TINYINT},
+            </if>
+            <if test="payType != null">
+                #{pay_type,jdbcType=TINYINT},
             </if>
         </trim>
     </insert>
@@ -178,6 +186,9 @@
             <if test="status != null">
                 status = #{status,jdbcType=TINYINT},
             </if>
+            <if test="payType != null">
+                pay_type = #{payType,jdbcType=TINYINT},
+            </if>
         </set>
         where order_id = #{orderId,jdbcType=VARCHAR}
     </update>
@@ -193,7 +204,8 @@
         payment_amount = #{paymentAmount,jdbcType=DECIMAL},
         coupon_amount = #{couponAmount,jdbcType=DECIMAL},
         loyalty_point = #{loyaltyPoint,jdbcType=BIGINT},
-        status = #{status,jdbcType=TINYINT}
+        status = #{status,jdbcType=TINYINT},
+        pay_type = #{payType,jdbcType=TINYINT}
         where order_id = #{orderId,jdbcType=VARCHAR}
     </update>
 </mapper>
