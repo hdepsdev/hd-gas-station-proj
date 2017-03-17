@@ -608,7 +608,6 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         PreferentialPriceResponse ppr = ps.queryPreferentialPrice(Long.valueOf(Utils.systemConfiguration.getProperty("eps.server.merchant.id")), pps);
         if(ppr.getDetails()==null || ppr.getDetails().isEmpty()){
         	order.setPaymentAmount(order.getOriginalAmount());
-        	order.setCouponAmount(new BigDecimal(0));
         }else{
         	BigDecimal total = new BigDecimal(0);
             int i = 0;
@@ -620,8 +619,8 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             }
             
             order.setPaymentAmount(total);
-            order.setCouponAmount(order.getOriginalAmount().subtract(total));
         }
+        order.setCouponAmount(new BigDecimal(0));
         
         //discountType 优惠类型 0:不满足优惠条件 1:有优惠 2:无优惠
         if (ppr.getDiscountType() == 1) {
@@ -651,10 +650,10 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     for (Map map : list) {
                         Coupon c = new Coupon();
                         c.setId(map.get("ID").toString());
-                        if (map.get("CONSUME_TYPE") != null) {
-                            c.setConsumeType(map.get("CONSUME_TYPE").toString());
+                        if (map.get("CONSUME_TYPE") != null && !map.get("CONSUME_TYPE").toString().trim().equals("")) {
+                            c.setConsumeType(new BigDecimal(map.get("CONSUME_TYPE").toString()).intValue());
                         }
-                        c.setType(map.get("TYPE").toString());
+                        c.setType(new BigDecimal(map.get("TYPE").toString()).intValue());
                         c.setAccount(new BigDecimal(map.get("ACCOUNT").toString()));
                         c.setTotal(new BigDecimal(map.get("TOTAL").toString()));
                         couponList.add(c);
@@ -697,33 +696,33 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
      */
     private Coupon selectCoupon(List<Coupon> list) {
         for (Coupon coupon : list) {
-            String consumeType = coupon.getConsumeType();
+            Integer consumeType = coupon.getConsumeType();
             //计算适用于该优惠券的总金额
             BigDecimal total = new BigDecimal(0);
             for (SaleItemEntity entity : order.getOrderItems()) {
-                if (consumeType == null || consumeType.trim().equals("")) {
+                if (consumeType == null) {
                     //不限
                     total = total.add(entity.getCouponAmount());
-                } else if ("1".equals(consumeType)) {
+                } else if (consumeType.intValue() == 1) {
                     //油品
                     if ("1".equals(entity.getItemCatalog())) {
                         total = total.add(entity.getCouponAmount());
                     }
-                } else if ("2".equals(consumeType)) {
+                } else if (consumeType.intValue() == 2) {
                     //非油品
                     if (!"1".equals(entity.getItemCatalog())) {
                         total = total.add(entity.getCouponAmount());
                     }
                 }
             }
-            //判断消费类型
-            if ("1".equals(consumeType)) {
+            //判断优惠类型，计算优惠金额
+            if (coupon.getType() == 1) {
                 //满减
                 BigDecimal threshold = coupon.getTotal();
                 if (order.getPaymentAmount().compareTo(threshold) > 0) {
                     coupon.setCouponAmount(coupon.getAccount());
                 }
-            } else if ("2".equals(consumeType)) {
+            } else if (coupon.getType() == 2) {
                 //折扣
                 coupon.setCouponAmount(total.multiply(coupon.getAccount()).setScale(2, BigDecimal.ROUND_HALF_UP));
             }
@@ -797,8 +796,8 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 @Data
 class Coupon {
     String id;
-    String consumeType;//消费类型，空为不限，1油品，2非油品
-    String type;//优惠类型，1满减，2折扣
+    Integer consumeType;//消费类型，空为不限，1油品，2非油品
+    int type;//优惠类型，1满减，2折扣
     BigDecimal account;//减额或者折扣
     BigDecimal total;//满额
     BigDecimal couponAmount = new BigDecimal(0);//该优惠券对于本订单可减免的金额（根据订单计算得出）
