@@ -531,7 +531,8 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     HttpClient client = HttpClients.createDefault();
                     HttpPost post = new HttpPost(Utils.systemConfiguration.getProperty("card.get.url"));
                     List<NameValuePair> param = new ArrayList<NameValuePair>();
-                    param.add(new BasicNameValuePair("cardId", cardNo));
+                    param.add(new BasicNameValuePair("open_id", openId));
+                    param.add(new BasicNameValuePair("type", "2"));
                     post.setEntity(new UrlEncodedFormEntity(param));
                     HttpResponse resp = client.execute(post);
                     String resultWS = EntityUtils.toString(resp.getEntity());
@@ -557,7 +558,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             payFail();
             logger.error("", e);
         }
-
+        order.setCardNumber(cardNo);
         PreferentialPriceService ps = (PreferentialPriceService) EPSServer.appctx.getBean("preferentialPriceService", PreferentialPriceService.class);
         //优惠查询请求对象
         PreferentialPriceRequest pps = new PreferentialPriceRequest();
@@ -731,7 +732,9 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         //选择对本次订单优惠幅度最大的优惠券
         for (Coupon coupon : list) {
             if (result == null) {
-                result = coupon;
+                if (coupon.getCouponAmount() != null && coupon.getCouponAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    result = coupon;
+                }
                 continue;
             }
             if (coupon.getCouponAmount() != null
@@ -764,7 +767,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     oilSale.setRefueling(entity.getQuantity().doubleValue());
                     oilSale.setOilId(entity.getProductCode());
                     oilSale.setFillingTime(new Date());
-                    policyRuleService.preCalcPoint(oilSale);
+                    policyRuleService.handleFlow(oilSale);
                 }
             }
 		} catch (Exception e) {
