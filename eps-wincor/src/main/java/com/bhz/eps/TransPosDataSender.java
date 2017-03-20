@@ -383,7 +383,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	                String operatorId = "";
 
 	                // (必填) 商户门店编号，通过门店号和商家后台可以配置精准到门店的折扣信息，详询支付宝技术支持
-	                String storeId = "";
+	                String storeId = order.getMerchantId();
 
 	                // 业务扩展参数，目前可添加由支付宝分配的系统商编号(通过setSysServiceProviderId方法)，详情请咨询支付宝技术支持
 	                String providerId = "2088100200300400500";
