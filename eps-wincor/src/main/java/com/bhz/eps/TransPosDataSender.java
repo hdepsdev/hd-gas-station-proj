@@ -242,7 +242,10 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         	//解析返回消息
         	byte[] tagBytes = msg.getBody().getHeader().getTag();
         	//当消息为非正常选择，则循环调用选择列表请求。
-        	if(tagBytes[0]!='0' || tagBytes[1]!='0'){
+        	if(tagBytes[0]=='0' && tagBytes[1]=='2'){
+        		return;
+        	}
+        	if(tagBytes[0] =='0' && tagBytes[1] == '1'){
         		TransPosDataSender tpd = TransPosDataSender.getInstance(Utils.systemConfiguration.getProperty("trans.pos.ip"),
                         Integer.parseInt(Utils.systemConfiguration.getProperty("trans.pos.port")));
         		tpd.selectPayMethodToPos(Utils.PAY_METHOD_LIST, order);
