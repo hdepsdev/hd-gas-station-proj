@@ -19,7 +19,8 @@ CREATE TABLE eps_orders (
   loyalty_point bigint DEFAULT NULL,					-- 积分
   status tinyint DEFAULT '0',							-- 订单状态（0，代支付；1，已支付；2，订单锁定）
   pay_type tinyint DEFAULT '0',						    -- 支付类型 （1：微信；2：支付宝；3：会员）
-  card_number varchar(50) DEFAULT NULL						-- 支付卡号
+  card_number varchar(50) DEFAULT NULL,						-- 支付卡号
+  coupon_id varchar(50) DEFAULT NULL        -- 优惠券id
   PRIMARY KEY (order_id)
 )
 

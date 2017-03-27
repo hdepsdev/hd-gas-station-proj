@@ -678,6 +678,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                             //使用成功，改变订单中金额
                             order.setPaymentAmount(order.getPaymentAmount().subtract(coupon.getCouponAmount()));
                             order.setCouponAmount(order.getCouponAmount().add(coupon.getCouponAmount()));
+                            order.setCouponId(coupon.getId());
                             logger.info(json.get("msg"));
                         } else {
                             logger.error("使用优惠券异常：" + json.get("msg"));
@@ -723,7 +724,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             if (coupon.getType() == 1) {
                 //满减
                 BigDecimal threshold = coupon.getTotal();
-                if (order.getPaymentAmount().compareTo(threshold) > 0) {
+                if (order.getPaymentAmount().compareTo(threshold) >= 0) {
                     coupon.setCouponAmount(coupon.getAccount());
                 }
             } else if (coupon.getType() == 2) {

@@ -60,6 +60,9 @@ public class Order implements java.io.Serializable{
 	
 	@Getter @Setter
 	private String cardNumber;
+
+    @Getter @Setter
+    private String couponId;
 	
 	//Virtual Property
 	@Getter @Setter

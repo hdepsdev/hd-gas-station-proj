@@ -200,6 +200,9 @@
             <if test="cardNumber != null">
                 card_number= #{cardNumber,jdbcType=VARCHAR},
             </if>
+            <if test="couponId != null">
+                coupon_id= #{couponId,jdbcType=VARCHAR},
+            </if>
         </set>
         where order_id = #{orderId,jdbcType=VARCHAR}
     </update>
@@ -217,7 +220,8 @@
         loyalty_point = #{loyaltyPoint,jdbcType=BIGINT},
         status = #{status,jdbcType=TINYINT},
         pay_type = #{payType,jdbcType=TINYINT},
-        card_number= #{cardNumber,jdbcType=VARCHAR}
+        card_number = #{cardNumber,jdbcType=VARCHAR},
+        coupon_id = #{couponId,jdbcType=VARCHAR}
         where order_id = #{orderId,jdbcType=VARCHAR}
     </update>
 </mapper>
