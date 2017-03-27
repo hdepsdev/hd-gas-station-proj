@@ -243,6 +243,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
         	byte[] tagBytes = msg.getBody().getHeader().getTag();
         	//当消息为非正常选择，则循环调用选择列表请求。
         	if(tagBytes[0]=='0' && tagBytes[1]=='2'){
+
         		return;
         	}
         	if(tagBytes[0] =='0' && tagBytes[1] == '1'){
@@ -594,7 +595,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             PolicyRuleService policyRuleService = (PolicyRuleService)EPSServer.appctx.getBean("pointRuleService", PolicyRuleService.class);
             OilSale oilSale = new OilSale();
             oilSale.setCardId(cardNo);
-            oilSale.setOrgId("1111111111");
+            oilSale.setOrgId(order.getMerchantId());
             oilSale.setAmount(entity.getAmount().doubleValue());
             oilSale.setOilPrices(entity.getUnitPrice().doubleValue());
             oilSale.setRefueling(entity.getQuantity().doubleValue());
@@ -763,7 +764,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     PolicyRuleService policyRuleService = (PolicyRuleService) EPSServer.appctx.getBean("pointRuleService", PolicyRuleService.class);
                     OilSale oilSale = new OilSale();
                     oilSale.setCardId(cardNo);
-                    oilSale.setOrgId("1111111111");
+                    oilSale.setOrgId(order.getMerchantId());
                     oilSale.setAmount(entity.getAmount().doubleValue());
                     oilSale.setOilPrices(entity.getUnitPrice().doubleValue());
                     oilSale.setRefueling(entity.getQuantity().doubleValue());

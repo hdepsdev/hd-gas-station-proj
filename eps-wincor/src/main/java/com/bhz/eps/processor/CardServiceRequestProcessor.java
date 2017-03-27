@@ -185,8 +185,8 @@ public class CardServiceRequestProcessor extends BizProcessor {
                                 Tender tender = new Tender();
 
                                 TotalAmount totalAmount = new TotalAmount();
-                                totalAmount.setTotalAmount(order.getPaymentAmount());
-                                totalAmount.setPaymentAmount(order.getPaymentAmount());
+                                totalAmount.setTotalAmount(order.getOriginalAmount());
+                                totalAmount.setPaymentAmount(order.getOriginalAmount());
                                 totalAmount.setRebateAmount(order.getCouponAmount());
                                 totalAmount.setOriginalAmount(order.getOriginalAmount());
                                 tender.setTotalAmount(totalAmount);
@@ -235,8 +235,8 @@ public class CardServiceRequestProcessor extends BizProcessor {
                                 Tender tender = new Tender();
 
                                 TotalAmount totalAmount = new TotalAmount();
-                                totalAmount.setTotalAmount(order.getPaymentAmount());
-                                totalAmount.setPaymentAmount(order.getPaymentAmount());
+                                totalAmount.setTotalAmount(order.getOriginalAmount());
+                                totalAmount.setPaymentAmount(order.getOriginalAmount());
                                 totalAmount.setRebateAmount(order.getCouponAmount());
                                 totalAmount.setOriginalAmount(order.getOriginalAmount());
                                 tender.setTotalAmount(totalAmount);
