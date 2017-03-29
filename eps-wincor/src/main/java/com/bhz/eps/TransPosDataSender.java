@@ -659,7 +659,11 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                         }
                         c.setType(new BigDecimal(map.get("TYPE").toString()).intValue());
                         c.setAccount(new BigDecimal(map.get("ACCOUNT").toString()));
-                        c.setTotal(new BigDecimal(map.get("TOTAL").toString()));
+                        if (map.get("TOTAL") != null) {
+                            c.setTotal(new BigDecimal(map.get("TOTAL").toString()));
+                        } else {
+                            c.setTotal(new BigDecimal(0));
+                        }
                         couponList.add(c);
                     }
                     //选择优惠券
