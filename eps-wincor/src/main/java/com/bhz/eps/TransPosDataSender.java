@@ -721,7 +721,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                 }
             } else if (coupon.getType() == 2) {
                 //折扣
-                coupon.setCouponAmount(total.multiply(coupon.getAccount()).setScale(2, BigDecimal.ROUND_HALF_UP));
+                coupon.setCouponAmount(total.multiply(new BigDecimal("1").subtract(coupon.getAccount())).setScale(2, BigDecimal.ROUND_HALF_UP));
             }
         }
         Coupon result = null;
