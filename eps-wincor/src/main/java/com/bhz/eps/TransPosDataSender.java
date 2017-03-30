@@ -787,6 +787,61 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     logger.error("使用优惠券异常：" + json.get("msg"));
                 }
             }
+
+            //发放优惠券
+            HttpClient client = HttpClients.createDefault();
+            List<NameValuePair> param = new ArrayList<NameValuePair>();
+            HttpPost post = new HttpPost(Utils.systemConfiguration.getProperty("coupon.send.url"));
+            param = new ArrayList<NameValuePair>();
+            param.add(new BasicNameValuePair("cardId", cardNo));
+            param.add(new BasicNameValuePair("time", new SimpleDateFormat("yyyy-MM-dd").format(new Date(order.getOrderTime()*1000))));
+            String type = null;//1油品，2非油，all不限
+            for (SaleItemEntity se : order.getOrderItems()) {
+                if ("1".equals(se.getItemCatalog()) || "2".equals(se.getItemCatalog())) {
+                    //油品
+                    if (type == null) {
+                        type = "1";
+                    } else if (type.equals("2")) {
+                        type = "all";
+                    }
+                } else {
+                    //非油
+                    if (type == null) {
+                        type = "2";
+                    } else if (type.equals("1")) {
+                        type = "all";
+                    }
+                }
+            }
+            if (type != null && !type.equals("all")) {
+                param.add(new BasicNameValuePair("type", type));
+            }
+            param.add(new BasicNameValuePair("org", order.getMerchantId()));//油站
+            String tag = "";//会员标签
+            List<NameValuePair> tagParam = new ArrayList<NameValuePair>();
+            tagParam.add(new BasicNameValuePair("virtualCardId", cardNo));
+            HttpPost tagPost = new HttpPost(Utils.systemConfiguration.getProperty("point.customer.url"));
+            tagPost.setEntity(new UrlEncodedFormEntity(tagParam));
+            HttpResponse tagResp = client.execute(tagPost);
+            Gson gson = new Gson();
+            Map tagJson = gson.fromJson(EntityUtils.toString(tagResp.getEntity()), Map.class);
+            if ((Boolean) tagJson.get("success")) {
+                Map msg = (Map) tagJson.get("msg");
+                tag = msg.get("cardLevelValue").toString();
+                logger.debug("会员标签为：" + msg.get("cardLevel"));
+            } else {
+                logger.error("获取会员标签异常：" + tagJson.get("msg"));
+            }
+            param.add(new BasicNameValuePair("tag", tag));
+            post.setEntity(new UrlEncodedFormEntity(param));
+            HttpResponse resp = client.execute(post);
+            String result = EntityUtils.toString(resp.getEntity());
+            Map json = gson.fromJson(result, Map.class);
+            if ((Boolean) json.get("success")) {
+                logger.info(json.get("msg"));
+            } else {
+                logger.error("发放优惠券异常：" + json.get("msg"));
+            }
 		} catch (Exception e) {
 			logger.error("", e);
 		}
