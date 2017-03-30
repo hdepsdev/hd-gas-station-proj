@@ -670,23 +670,11 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     Coupon coupon = selectCoupon(couponList);
                     //使用优惠券
                     if (coupon != null && coupon.getCouponAmount() != null) {
-                        post = new HttpPost(Utils.systemConfiguration.getProperty("coupon.use.url"));
-                        param = new ArrayList<NameValuePair>();
-                        param.add(new BasicNameValuePair("cardId", cardNo));
-                        param.add(new BasicNameValuePair("couponId", coupon.getId()));
-                        post.setEntity(new UrlEncodedFormEntity(param));
-                        resp = client.execute(post);
-                        result = EntityUtils.toString(resp.getEntity());
-                        json = gson.fromJson(result, Map.class);
-                        if ((Boolean) json.get("success")) {
-                            //使用成功，改变订单中金额
-                            order.setPaymentAmount(order.getPaymentAmount().subtract(coupon.getCouponAmount()));
-                            order.setCouponAmount(order.getCouponAmount().add(coupon.getCouponAmount()));
-                            order.setCouponId(coupon.getId());
-                            logger.info(json.get("msg"));
-                        } else {
-                            logger.error("使用优惠券异常：" + json.get("msg"));
-                        }
+                        //改变订单中金额
+                        order.setPaymentAmount(order.getPaymentAmount().subtract(coupon.getCouponAmount()));
+                        order.setCouponAmount(order.getCouponAmount().add(coupon.getCouponAmount()));
+                        order.setCouponId(coupon.getId());
+                        logger.info(json.get("msg"));
                     }
                 } else {
                     logger.error("使用优惠券异常：" + json.get("msg"));
@@ -776,6 +764,27 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     oilSale.setOilId(entity.getProductCode());
                     oilSale.setFillingTime(new Date());
                     policyRuleService.handleFlow(oilSale);
+                }
+            }
+
+            //使用优惠券
+            if (order.getCouponId() != null && !order.getCouponId().trim().equals("")) {
+                HttpClient client = HttpClients.createDefault();
+                List<NameValuePair> param = new ArrayList<NameValuePair>();
+                HttpPost post = new HttpPost(Utils.systemConfiguration.getProperty("coupon.use.url"));
+                param = new ArrayList<NameValuePair>();
+                param.add(new BasicNameValuePair("cardId", cardNo));
+                param.add(new BasicNameValuePair("couponId", order.getCouponId()));
+                post.setEntity(new UrlEncodedFormEntity(param));
+                HttpResponse resp = client.execute(post);
+                String result = EntityUtils.toString(resp.getEntity());
+                Gson gson = new Gson();
+                Map json = gson.fromJson(result, Map.class);
+                if ((Boolean) json.get("success")) {
+                    //使用成功
+                    logger.info(json.get("msg"));
+                } else {
+                    logger.error("使用优惠券异常：" + json.get("msg"));
                 }
             }
 		} catch (Exception e) {
