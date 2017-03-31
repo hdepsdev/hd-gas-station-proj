@@ -702,12 +702,12 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     total = total.add(entity.getCouponAmount());
                 } else if (consumeType.intValue() == 1) {
                     //油品
-                    if ("1".equals(entity.getItemCatalog())) {
+                    if ("1".equals(entity.getItemCatalog()) || "2".equals(entity.getItemCatalog())) {
                         total = total.add(entity.getCouponAmount());
                     }
                 } else if (consumeType.intValue() == 2) {
                     //非油品
-                    if (!"1".equals(entity.getItemCatalog())) {
+                    if (!"1".equals(entity.getItemCatalog()) && !"2".equals(entity.getItemCatalog())) {
                         total = total.add(entity.getCouponAmount());
                     }
                 }
@@ -716,7 +716,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             if (coupon.getType() == 1) {
                 //满减
                 BigDecimal threshold = coupon.getTotal();
-                if (order.getPaymentAmount().compareTo(threshold) >= 0) {
+                if (total.compareTo(threshold) >= 0) {
                     coupon.setCouponAmount(coupon.getAccount());
                 }
             } else if (coupon.getType() == 2) {
