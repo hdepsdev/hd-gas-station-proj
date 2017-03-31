@@ -654,8 +654,8 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
                     for (Map map : list) {
                         Coupon c = new Coupon();
                         c.setId(map.get("ID").toString());
-                        if (map.get("CONSUME_TYPE") != null && !map.get("CONSUME_TYPE").toString().trim().equals("")) {
-                            c.setConsumeType(new BigDecimal(map.get("CONSUME_TYPE").toString()).intValue());
+                        if (map.get("USE_TYPE") != null && !map.get("USE_TYPE").toString().trim().equals("")) {
+                            c.setConsumeType(new BigDecimal(map.get("USE_TYPE").toString()).intValue());
                         }
                         c.setType(new BigDecimal(map.get("TYPE").toString()).intValue());
                         c.setAccount(new BigDecimal(map.get("ACCOUNT").toString()));
@@ -834,8 +834,13 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
             }
             param.add(new BasicNameValuePair("tag", tag));
             post.setEntity(new UrlEncodedFormEntity(param));
+            logger.debug("发放优惠券URI：" + post.getURI() + "，参数：");
+            for (NameValuePair nv : param) {
+                logger.debug(nv.getName() + ":" + nv.getValue());
+            }
             HttpResponse resp = client.execute(post);
             String result = EntityUtils.toString(resp.getEntity());
+            logger.debug("发放优惠券返回数据：" + result);
             Map json = gson.fromJson(result, Map.class);
             if ((Boolean) json.get("success")) {
                 logger.info(json.get("msg"));
