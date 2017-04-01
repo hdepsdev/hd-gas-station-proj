@@ -16,6 +16,7 @@ import java.util.UUID;
 import com.bhz.eps.entity.PayMethod;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
 public class Utils {
@@ -162,6 +163,20 @@ public class Utils {
 		}
 		return "";
 	}
+
+    public static String byteToHexStr(byte[] array, String split) {
+        String str = ByteBufUtil.hexDump(array).toUpperCase();
+        StringBuilder result = new StringBuilder();
+        for (int i = 0, length = str.length(); i < length / 2; i++) {
+            result.append(str.substring(0,2) + split);
+            str = str.substring(2);
+        }
+        return result.toString();
+    }
+
+    public static String byteToHexStr(byte[] array) {
+        return byteToHexStr(array, " ");
+    }
 	
 	public static void main(String[] args) throws Exception{
 		byte[] s = Utils.convertGB("中国",32).getBytes(Charset.forName("GB2312"));
