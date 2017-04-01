@@ -31,6 +31,7 @@ import com.tencent.protocol.pay_protocol.ScanPayReqData;
 import com.tencent.protocol.pay_protocol.ScanPayResData;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -1045,7 +1046,7 @@ class SendReceiptHandler extends SimpleChannelInboundHandler<TPDU>{
 		}
 		byte[] result = Utils.concatTwoByteArray(tmp3, b.array());
 		logger.debug("Send receipt to Trans POS.");
-        logger.debug(Arrays.toString(result));
+        logger.debug(Utils.byteToHexStr(result));
 		ctx.writeAndFlush(result);
 	}
 	
