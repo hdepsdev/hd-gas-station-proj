@@ -212,6 +212,14 @@ public class TransPosDataSender {
 class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	private static final Logger logger = LogManager.getLogger(TransPosOrderHandler.class);
     private static final String CARD_NO_DEF = "99000211111200001000";//所有非会员消费卡号
+    private static Properties wxinfo = new Properties();
+    static{
+        try {
+            wxinfo.load(Utils.class.getClassLoader().getResourceAsStream("conf/wxinfo.properties"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     // 支付宝当面付2.0服务
     private static AlipayTradeService tradeService;
     {
@@ -308,6 +316,7 @@ class SelectPayMethodHandler extends SimpleChannelInboundHandler<TPDU>{
 	                goodsTag = "";
 
 	                //向微信支付网关发送数据
+                    WXPay.initSDKConfiguration(wxinfo.getProperty("wx.key"),wxinfo.getProperty("wx.appID"),wxinfo.getProperty("wx.mchID"),wxinfo.getProperty("wx.subMchID"),wxinfo.getProperty("certLocalPath"),wxinfo.getProperty("certPassword"));
 	                ScanPayReqData scanPayReqData = new ScanPayReqData(authCode, body, attach, outTradeNo, totalFee, deviceInfo, spBillCreateIP, timeStart, timeExpire, goodsTag);
 	                
 	                
